@@ -255,7 +255,8 @@ class ResUNet_Meta(MetaModule):
 
         for i in range(len(self.decs_module_sizes)):
             x0, x1 = outs.pop(), outs.pop()
-
+            # print('modsunet258------------------------OOM ERR7----------------------', len(self.decs_module_sizes), x0.shape, x1.shape)
+            # print('if this error happens change load_im_scale')
             x = torch.cat((self.upsample(x0), x1), dim=1)
 
             x = self.forward_module_list(x, self.decs[decs_c:decs_c+self.decs_module_sizes[i]],

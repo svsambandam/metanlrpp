@@ -190,6 +190,7 @@ def decompose_projection_matrix(projection_matrix: np.array):
     C_in = mat[2, 2]
     check_match("C", C_in, C_ref)
 
+
     check_match("M32", mat[3, 2], -1)
 
     # RL

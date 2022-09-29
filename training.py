@@ -75,6 +75,8 @@ def train(model, train_dataloader, epochs, lr, steps_til_summary, epochs_til_che
             for step, (model_input, gt) in enumerate(train_dataloader):
                 start_time = time.time()
 
+                print('TRAIN ID:',model_input['target_view_id'])
+
                 # Override inputs for verbose record iter 0
                 if verbose_record is not None and total_steps == verbose_record['step']:
                     model_input = verbose_record['inputs']
@@ -120,6 +122,12 @@ def train(model, train_dataloader, epochs, lr, steps_til_summary, epochs_til_che
                 elif model.opt.dataset_name == 'nlr':
                     OPTSHAPE_FIRST = 100
                     OPTSHAPE_EVERY = 3
+                elif model.opt.dataset_name == 'nerfies':
+                    OPTSHAPE_FIRST = 50
+                    OPTSHAPE_EVERY = 7
+                elif model.opt.dataset_name == 'mynlr':
+                    OPTSHAPE_FIRST = 50
+                    OPTSHAPE_EVERY = 7
 
                 # Forward.
                 t1iter = time.time()

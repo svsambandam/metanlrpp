@@ -15,6 +15,7 @@ from functools import partial
 import torch
 from torch.utils.data import DataLoader
 import configargparse
+torch.cuda.empty_cache() ##############################################################################
 
 import data_processing.datasets.dataio_features as dataio_features
 import utils.utils_ibr as utils_ibr

@@ -27,7 +27,7 @@ class ImageView(object):
 
     def __init__(self, image_filename: Path, opt):
         super().__init__()
-
+    
         self.opt = opt
         self.name = image_filename.stem
         self.image_filename = image_filename
@@ -44,7 +44,6 @@ class ImageView(object):
         self.mask = None
         if self.opt.load_images:
             self.load_image(image_filename)
-
             if opt.load_im_scale < 1.0:
                 # Hard-downscale.
                 self.meta_resolution = np.array(self.meta_resolution.astype(float) *

@@ -741,6 +741,8 @@ def _compute_normals(decoder: SDFIBRNet, coords: torch.Tensor, times: torch.Tens
     sdf = output['model_out'][..., :1]
 
     # Compute grad f_0
+    # print('------------------------OOM ERR1----------------------', sdf.shape, coords.shape)
+
     gradient = diff_operators.gradient(sdf, coords)
     return gradient, output['model_out']
 

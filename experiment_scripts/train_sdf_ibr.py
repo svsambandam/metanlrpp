@@ -24,6 +24,9 @@ import training
 import loss_functions
 import modules_sdf
 
+import time
+start_time = time.time()
+
 
 def get_arg_parser():
     p = configargparse.ArgumentParser()
@@ -59,7 +62,7 @@ def get_arg_parser():
 
     # General training options
     p.add_argument('--device', type=str, default='cuda', help='Device to use.')
-    p.add_argument('--batch_size', type=int, default=32768, help='Number of points for 3D supervision')
+    p.add_argument('--batch_size', type=int, default=768, help='Number of points for 3D supervision') #32768
     p.add_argument('--num_epochs', type=int, default=3000, help='Number of epochs to train for.')
     p.add_argument('--lr', type=float, default=1e-4, help='learning rate. default=1e-4')
     p.add_argument('--lr_sdf', type=float, default=5e-5, help='learning rate for sdf. default=5e-5.')
@@ -141,7 +144,7 @@ def get_arg_parser():
     p.add_argument('--dataset_type', type=str, default='sinesdf_static',
                    help='Dataset type [sinesdf_static].')
     p.add_argument('--dataset_name', type=str, default='dtu',
-                   help='Dataset name [dtu|nlr|shapenet]')
+                   help='Dataset name [dtu|nlr|nerfies|shapenet]')
     p.add_argument('--world_pcd_path', type=str, default='',
                    help='Alternative path to PCD to use instead of the dataset.')
     p.add_argument('--load_pcd', type=int, default=1,
@@ -260,6 +263,7 @@ def get_sdf_decoder(opt, dataset: dataio_sdf.DatasetSDF = None):
     ray_builder = None
     if dataset is not None and dataset.dataset_img is not None:
         ray_builder = RayBuilder(opt, dataset.dataset_img, dataset.model_matrix)
+    # print('---------------------trainsdfibr265------------------', len(dataset.dataset_img), dataset.model_matrix, ray_builder)
 
     # Define the model.
     model = modules_sdf.SDFIBRNet(opt, ray_builder=ray_builder)
@@ -273,11 +277,29 @@ def get_dataset(opt, WITHHELD_VIEWS=None):
     """
     if WITHHELD_VIEWS is None:
         if opt.dataset_name == 'dtu':
-            opt.TRAIN_VIEWS = [1, 9, 17, 25, 33, 41, 47]
-            opt.WITHHELD_VIEWS = list(set(list(range(0, 49))) - set(opt.TRAIN_VIEWS))
+            # opt.TRAIN_VIEWS = [1, 9, 17, 25, 33, 41, 47]
+            # opt.WITHHELD_VIEWS = list(set(list(range(0, 49))) - set(opt.TRAIN_VIEWS))
+            # opt.TRAIN_VIEWS = [0, 6, 14, 20, 27, 34, 39] # my_dtu
+            # opt.WITHHELD_VIEWS = list(set(list(range(0, 41))) - set(opt.TRAIN_VIEWS))
+            opt.TRAIN_VIEWS = [1, 9, 17, 23, 31, 38, 44]
+            opt.WITHHELD_VIEWS = list(set(list(range(0, 46))) - set(opt.TRAIN_VIEWS))
+        # elif opt.dataset_name == 'nlr':
+        #     # opt.TRAIN_VIEWS = [16, 17, 18, 20, 21, 19]
+        #     opt.TRAIN_VIEWS = [16, 17, 18, 20, 21]
+        #     print('I CHNAGED NLR TRAINING VIEWS')
+        #     opt.WITHHELD_VIEWS = list(set(list(range(0, 21))) - set(opt.TRAIN_VIEWS))
         elif opt.dataset_name == 'nlr':
-            opt.TRAIN_VIEWS = [16, 17, 18, 20, 21, 19]
+            print('WARNING-------------------------------- this is for lv1 lowres!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+            opt.TRAIN_VIEWS = [0, 12, 3, 13, 7]#[0, 2, 4, 7, 9] #[0, 2, 3, 5, 7]
+            print('I CHNAGED NLR TRAINING VIEWS')
+            opt.WITHHELD_VIEWS = list(set(list(range(0, 15))) - set(opt.TRAIN_VIEWS))
+        elif opt.dataset_name == 'nerfies':
+            opt.TRAIN_VIEWS =  [0, 1, 2, 3, 4, 5, 6]# #[1, 14, 22, 36, 46, 52] oroginially for leftnew3 and i was thinking [0, 23, 34, 9, 22, 18, 33] for leftnew4 but lets try this with fewer views
+            #opt.WITHHELD_VIEWS = list(set(list(range(0, 74))) - set(opt.TRAIN_VIEWS))
             opt.WITHHELD_VIEWS = list(set(list(range(0, 21))) - set(opt.TRAIN_VIEWS))
+        elif opt.dataset_name == 'mynlr':
+            opt.TRAIN_VIEWS =  [0, 12, 3, 13, 7 ]#[0, 2, 4, 7, 9]
+            opt.WITHHELD_VIEWS = list(set(list(range(0, 15))) - set(opt.TRAIN_VIEWS))
         elif opt.dataset_name == 'shapenet':
             opt.WITHHELD_VIEWS = [7, 16, 23]
             opt.TRAIN_VIEWS = list(set(list(range(0, 23))) - set(opt.WITHHELD_VIEWS))
@@ -428,6 +450,6 @@ def main():
                    clip_grad=True, optim=optimizer, verbose_record_file=opt.load_verbose_record,
                    ibr_log=True)
 
-
 if __name__ == "__main__":
     main()
+    print("OVERALL RUN TIME --- %s seconds ---" % (time.time() - start_time))

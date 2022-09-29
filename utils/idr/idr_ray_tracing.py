@@ -5,6 +5,7 @@ RayTracer from the IDR code.
 import torch
 import torch.nn as nn
 from utils.idr import rend_util
+import numpy as np
 
 
 class IDRRayTracing(nn.Module):
@@ -71,6 +72,23 @@ class IDRRayTracing(nn.Module):
         #       .format(network_object_mask.sum(), len(network_object_mask), sampler_net_obj_mask.sum(), sampler_mask.sum()))
         # print('----------------------------------------------------------------')
 
+        ### # FIXED DEPTH
+        
+        # meta = np.array({'curr_start_points':curr_start_points,
+        #         'network_object_mask':network_object_mask,
+        #         'acc_start_dis':acc_start_dis
+        #     })
+        # np.save('./my_data/my_dtu/nlr/test/blue/fixed_depth_new.npy', meta, allow_pickle=True)
+
+
+        # loc = './my_data/my_dtu/nlr/test/blue/fixed_depth.npy'
+        # acc_start_dis = np.load(loc, allow_pickle=True).item()['acc_start_dis']
+        # network_object_mask = np.load(loc, allow_pickle=True).item()['network_object_mask']
+        ## CONSTANT DEPTH
+        # acc_start_dis = torch.ones_like(acc_start_dis)*3
+        # curr_start_points = (cam_loc + acc_start_dis.reshape(batch_size, num_pixels, 1) * ray_directions).reshape(-1, 3)
+        # print('WARNING-------------- FIXED DEPTH IDR RT LINE90')
+        
         if not self.training:
             return curr_start_points, \
                 network_object_mask, \
@@ -130,7 +148,7 @@ class IDRRayTracing(nn.Module):
 
         # Initizliae min and max depth
         min_dis = acc_start_dis.clone()
-        max_dis = acc_end_dis.clone()
+        max_dis = acc_end_dis.clone()   
 
         # Iterate on the rays (from both sides) till finding a surface
         iters = 0

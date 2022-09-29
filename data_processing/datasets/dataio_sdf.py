@@ -63,6 +63,7 @@ class DatasetSDF(Dataset):
         index = self.reference_view_index
         if index < 0:
             return None
+        # print('dataoisdf71-----------------------------', len(self.dataset_img.image_views), index)
         return self.dataset_img.image_views[index]
 
     @property
@@ -370,5 +371,7 @@ class DatasetSDF(Dataset):
             im_inputs, im_gt = self.dataset_img[idx]
             inputs.update(im_inputs)
             gt.update(im_gt)
+
+        # import ipdb; ipdb.set_trace()        
 
         return inputs, gt

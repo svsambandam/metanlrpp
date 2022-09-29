@@ -44,7 +44,6 @@ def load_point_cloud(pcd_file: Path):
         # Remember pcd->original transform.
         if 'm_pcd_to_original' in meta:
             m_pcd_to_original = meta['m_pcd_to_original']
-
     return points, normals, colors, m_pcd_to_original
 
 

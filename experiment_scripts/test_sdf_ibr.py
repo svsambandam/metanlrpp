@@ -29,6 +29,9 @@ import data_processing.datasets.dataio_sdf as dataio_sdf
 from data_processing.datasets.image_view import ImageView
 from utils import math_utils
 
+import time
+start_time = time.time()
+
 
 def try_load_optimizer(opt, checkpoint_file):
     """
@@ -59,6 +62,7 @@ def raytrace_view(filename,
         imageio.imwrite(str(filename) + '_crop_gt.png', crop_gt.permute(1, 2, 0).numpy())
         view_size = opt.image_crop[2:]
 
+    print('-------------------------test_df_ibr, opt.source_views_per_target',opt.source_views_per_target)
     res = sdf_meshing.raytrace_sdf_ibr(model,
                                        resolution=view_size,
                                        projection_matrix=projection_matrix,
@@ -102,11 +106,13 @@ def main():
         if p.get_default(k) is None and v == 'None':
             setattr(opt, k, None)
     opt.ibr_dataset = 1
-    opt.source_views_per_target = -1
+    print('HEY I CHANGED THE source_views_per_target')
+    # opt.source_views_per_target = -1
 
     opt.im_scale = 1
     if opt.dataset_name == 'dtu':
-        opt.load_im_scale = 0.5
+        print('I CHANGED line 114 IN TEST TO MAKE DTU LOAD SMALL')
+        opt.load_im_scale = 0.2 #0.5 
         WITHHELD_VIEWS = [12, 32, 40]
     elif opt.dataset_name == 'nlr':
         opt.load_im_scale = 0.2
@@ -200,3 +206,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+    print("OVERALL RUN TIME --- %s seconds ---" % (time.time() - start_time))

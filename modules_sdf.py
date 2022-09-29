@@ -1,3 +1,4 @@
+from traceback import print_tb
 import torch
 from torch import nn
 from torchmeta.modules import (MetaModule, MetaSequential)
@@ -104,6 +105,10 @@ class SDFIBRNet(MetaModule):
                     filename = 'sphere_sine128x5'
                 elif self.opt.dataset_name == 'nlr':
                     filename = 'sphere_sine256x5'
+                elif self.opt.dataset_name == 'nerfies':
+                    filename = 'sphere_sine128x5'
+                elif self.opt.dataset_name == 'mynlr':
+                    filename = 'sphere_sine128x5'
                 folder = 'regularized' if self.opt.init_regularized else 'base'
                 self.load_checkpoint(f'./assets/{folder}/{filename}.pth', True, False)
 
@@ -156,7 +161,6 @@ class SDFIBRNet(MetaModule):
                 self.total_number_views = [self.opt.total_number_source_views for _ in range(len(self.ray_builder))]
             else:
                 self.total_number_views = self.opt.total_number_source_views
-
         if self.opt.source_views_per_target == -1:
             if opt.is_meta:
                 self.opt.source_views_per_target = [tv-1-len(opt.WITHHELD_VIEWS) for tv in self.total_number_views]
@@ -165,6 +169,7 @@ class SDFIBRNet(MetaModule):
         elif opt.is_meta:
             self.opt.source_views_per_target = [self.opt.source_views_per_target for _ in range(len(self.total_number_views))]
 
+        # import ipdb; ipdb.set_trace()   
         if opt.source_view_selection_mode == "random":
             self.source_view_select_fn = self.source_view_select_random_withheld
         elif opt.source_view_selection_mode == "nearest":
@@ -179,6 +184,8 @@ class SDFIBRNet(MetaModule):
         if self.opt.dataset_name == 'dtu' or self.opt.dataset_name == 'shapenet':
             filename = 'sphere_sine128x5'
         elif self.opt.dataset_name == 'nlr':
+            filename = 'sphere_sine256x5'
+        elif self.opt.dataset_name == 'nerfies':
             filename = 'sphere_sine256x5'
         folder = 'regularized' if self.opt.init_regularized else 'base'
         self.load_checkpoint(f'./assets/{folder}/{filename}.pth', load_sdf=True)
@@ -257,6 +264,7 @@ class SDFIBRNet(MetaModule):
 
         model_matrix = ray_builder_curr.model_matrix
         for view_id in source_view_ids:
+            # print('---modsdf265-------------------------------', view_id, '/', len(ray_builder_curr.img_dataset.frames[0].image_views))
             view = ray_builder_curr.img_dataset.frames[0].image_views[view_id]
             proj_matrix = view.projection_matrix
             view_matrix = view.view_matrix
@@ -269,6 +277,7 @@ class SDFIBRNet(MetaModule):
                                                                     proj_matrix, -1, batch_size=0, params=params)
                 precomputed_buffers[view_id] = res
             else:
+                print('viewid: ', view_id)
                 res = sdf_rendering.render_view_proj(self, resolution, model_matrix, view_matrix,
                                                      proj_matrix, -1, batch_size=0, params=params)
                 precomputed_buffers[view_id] = {'pos': res['pos']}
@@ -282,17 +291,45 @@ class SDFIBRNet(MetaModule):
         # Convert to homogeneous coordinates, 4 x N.
         resolution = source_pos.shape[0:2]
         source_pos = source_pos.view(-1, 3).transpose(0, 1)
+
+        # print('WARNING modsdf290 ----------------------- changed sourcepos homog in projview')
+        # source_pos = torch.tensor(np.mgrid[-.1:.1:50j,-.1:.1:50j,-.1:.1:50j].reshape(3,-1)*5, dtype=torch.float).to('cuda')
+
         source_pos_homog = torch.cat((source_pos, torch.ones_like(source_pos)[0].unsqueeze(0)), 0)
 
         # Project 3D source points to other viewpoint.
-        projected_pos_homog = target_proj_matrix @ target_view_matrix @ model_matrix @ source_pos_homog
+        # projected_pos_homog = target_proj_matrix @ target_view_matrix @ model_matrix @ source_pos_homog
+        projected_pos_homog = model_matrix @ source_pos_homog
+        projected_pos_homog = target_view_matrix @ projected_pos_homog
+        # projected_pos_homog = projected_pos_homog / torch.clamp(projected_pos_homog[2, :].unsqueeze(0), min=1e-8)
+        projected_pos_homog = target_proj_matrix @ projected_pos_homog
 
         # Convert into in projected space x/w, y/w, z/w. Clamp to 1e-8 to prevent NANs in backward pass?
         # projected_pos = projected_pos_homog[:3, :] / projected_pos_homog[3, :].unsqueeze(0)
         # projected_pos[projected_pos < 1e-8] = 0
-        projected_pos = projected_pos_homog[:3, :] / torch.clamp(projected_pos_homog[3, :].unsqueeze(0), min=1e-8)
+        w = projected_pos_homog[3, :].unsqueeze(0)
+        projected_pos_homog = projected_pos_homog / torch.where(torch.abs(w)>1e-8, w, torch.ones(w.shape).to(w.device)*1e-8)
+        z = projected_pos_homog[2, :].unsqueeze(0)
+        projected_pos_homog = projected_pos_homog / torch.where(torch.abs(z)>1e-8, z, torch.ones(z.shape).to(z.device)*1e-8)
+        # projected_pos_homog = projected_pos_homog[:3, :] / torch.clamp(projected_pos_homog[2, :].unsqueeze(0), min=1e-8)
+        projected_pos = projected_pos_homog[:3, :]
         projected_pos = projected_pos.transpose(0, 1).reshape(resolution[0], resolution[1], 3)
 
+###################
+        # print('WARNING projectview modsdf300-----------------------')
+        # coords = np.load('/ubc/cs/research/kmyi/svsamban/research/metanlrpp/my_data/my_dtu/scan24/points.npy',allow_pickle=True)
+        # source_pos = torch.tensor(coords.astype(np.float32)).transpose(0, 1)# *2
+        # source_pos_homog = torch.cat((source_pos, torch.ones_like(source_pos)[0].unsqueeze(0)), 0).to('cuda')
+        
+        # projected_pos_homog = model_matrix @ source_pos_homog
+        # projected_pos_homog = target_view_matrix @ projected_pos_homog
+        # projected_pos_homog = target_proj_matrix @ projected_pos_homog 
+
+        
+        # projected_pos = projected_pos_homog[:3, :] / torch.clamp(projected_pos_homog[3, :].unsqueeze(0), min=1e-8)
+        # projected_pos = projected_pos.transpose(0, 1)#.reshape(resolution[0], resolution[1], 3)
+        
+###################
         return projected_pos
 
     def project_target_view_to_sources(self, target_view_id_or_trgt_res,
@@ -307,19 +344,39 @@ class SDFIBRNet(MetaModule):
         if computed_buffers is None:
             trgt_res = target_view_id_or_trgt_res
         else:
+            # np.save('./my_data/dtu_v3/processed/scan24/blah/GTbuff.npy',{'buffer': computed_buffers},allow_pickle=True)
+            # print('WARNING------------chaged buffers 322modsdf')
+            # computed_buffers = np.load('./my_data/my_dtu/nlr/test/buff.npy', allow_pickle=True).item()
+            # computed_buffers = np.load('./my_data/dtu_v3/processed/scan24/blah/GTbuff.npy', allow_pickle=True).item()['buffer']
             trgt_res = computed_buffers[target_view_id_or_trgt_res]
+
+        SneDict = {}
+       
 
         # Iterate through all source views.
         for i, view_id in enumerate(source_view_ids):
+            # print('view: ', view_id)
             view = ray_builder_curr.img_dataset.frames[0].image_views[view_id]
             src_proj_matrix = view.projection_matrix
             src_view_matrix = view.view_matrix
             projected_pos = self.project_view(trgt_res['pos'], model_matrix, src_view_matrix, src_proj_matrix)
-
+            
             all_projected_pos += [projected_pos]
+            
+            SneDict[view_id] = projected_pos
 
         # Stack points in all other views. No check if in frustum of camera, or occlusion.
         all_projected_pos = torch.stack(all_projected_pos, 0)
+        
+        # np.save('./my_data/my_dtu/nlr/test/blue/ptsproj.npy', SneDict, allow_pickle=True)
+        # np.save('./my_data/dtu_v3/processed/scan24/blue/blue.npy', SneDict, allow_pickle=True)
+        # np.save('./my_data/dtu_v3/processed/scan55/blue/blue.npy', SneDict, allow_pickle=True)
+        # np.save('./my_data/my_dtu/nlr/test24/blue/blue.npy', SneDict, allow_pickle=True)
+        # np.save('./my_data/my_dtu/nlr/test55/blue/blue.npy', SneDict, allow_pickle=True)
+        np.save('./my_data/my_dtu/nlr/lv1/blue/blue.npy', SneDict, allow_pickle=True)
+        # np.save('./my_data/my_dtu/nlr/curls/blue/blue.npy', SneDict, allow_pickle=True)
+        # np.save('./my_data/nlr_processed_renamed/lv1-lowres/blue/blue.npy', SneDict, allow_pickle=True)
+        # print('--------------------------------------------saved--------------------------------------------')
         return all_projected_pos
 
     @torch.no_grad()
@@ -441,6 +498,8 @@ class SDFIBRNet(MetaModule):
             masks.append(ray_builder_curr.img_dataset.frames[0].image_views[view_id].mask)
 
         # Stack images, normalize in [-1,1], and then encode into features.
+        # print('-------------------------------------------------------------------------------------------------------------------511modsdf')
+        # print('-------------------',images, len(images))
         images = torch.stack(images, 0).to(self.device)
         images_res = (images * 2) - 1
 
@@ -719,6 +778,9 @@ class SDFIBRNet(MetaModule):
 
         source_image_features_a, source_images_a = self.encoding_fn(source_view_ids, dataset_num, params=params)
 
+        # print('WARNING I CHANGED TRAINING BUFFER CODE MODSF LINE 764 UNCOMMENT ')
+        # computed_buffers = self.precomputed_buffers
+        ####
         if model_input['train_shape']:
             computed_buffers_new = self.compute_3D_buffers(source_view_ids[-bs:], grad=1, params=params, dataset_num=dataset_num)
             computed_buffers_old = self.precomputed_buffers
@@ -727,6 +789,7 @@ class SDFIBRNet(MetaModule):
             computed_buffers = computed_buffers_old
         else:
             computed_buffers = self.precomputed_buffers
+        ###
 
         trgt_imgs = {}
 
@@ -757,6 +820,8 @@ class SDFIBRNet(MetaModule):
     def forward_single(self, target_view_id, target_view_idx, source_view_ids,
                        source_image_features_a, computed_buffers, params=None, dataset_num=None,
                        return_dense=False, train_shape=False):
+        # target_view_id = 3
+        # print('WARNING__________________________ change made at line806 on modsdf')
         projected_pos_maps_a = self.project_target_view_to_sources(target_view_id, source_view_ids, computed_buffers,
                                                                    dataset_num=dataset_num)
 
@@ -891,7 +956,11 @@ class SDFIBRNet(MetaModule):
     @torch.no_grad()
     def forward_test_custom(self, model_matrix, view_matrix, projection_matrix, resolution, vid_frame=0):
         # Get target view and source view ids, and project target view to source views.
-        source_view_ids = self.source_view_select_fn(0)
+        if self.opt.dataset_name == 'nlr':
+            source_view_ids = self.source_view_select_fn(19)
+        else:
+            source_view_ids = self.source_view_select_fn(0)
+
         print(source_view_ids)
 
         source_image_features, source_images = self.encoding_fn(source_view_ids)

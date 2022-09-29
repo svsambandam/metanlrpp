@@ -106,7 +106,8 @@ def plot_camera_scene(view_original: np.array, view_optimized: np.array,
 
     # Left-handed -> Right-handed
     ax.invert_xaxis()
-
+    
+    show_gui = True
     if show_gui:
         plt.show()
     return fig

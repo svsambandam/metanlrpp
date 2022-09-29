@@ -223,6 +223,7 @@ class PointCloudVideo(Dataset):
         methods = self.opt.scene_normalization.split(',')
         model_matrix = None
         for method in methods:
+
             method = method.lower()
             if method in ['pcd', 'camera']:
                 # Try to build model matrix from scene stats.
@@ -354,4 +355,5 @@ class PointCloudVideo(Dataset):
             'colors': torch.from_numpy(colors).float(),
         }
 
+        # import ipdb; ipdb.set_trace()   
         return inputs, gt

@@ -135,6 +135,7 @@ def compute_pcd_error(coords_gt: np.array, rt_res: dict, m_to_original: np.array
     Both clouds are in the normalized model coordinates (inside unit sphere).
     Adds error map into rt_res.
     """
+    print('BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB_errormetrics138')
 
     # Build ray-traced PCD
     pos = rt_res['raw']['pos'].cpu().numpy().reshape(-1, 3)
