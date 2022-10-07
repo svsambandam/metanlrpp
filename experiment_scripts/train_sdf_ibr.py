@@ -62,7 +62,8 @@ def get_arg_parser():
 
     # General training options
     p.add_argument('--device', type=str, default='cuda', help='Device to use.')
-    p.add_argument('--batch_size', type=int, default=768, help='Number of points for 3D supervision') #32768
+    p.add_argument('--sphere_tracing_iters', type=int, default=10, help='Number of Sphere tracing steps. Set to 0 if want to skip this and go to Secant.')
+    p.add_argument('--batch_size', type=int, default=32768, help='Number of points for 3D supervision') #32768
     p.add_argument('--num_epochs', type=int, default=3000, help='Number of epochs to train for.')
     p.add_argument('--lr', type=float, default=1e-4, help='learning rate. default=1e-4')
     p.add_argument('--lr_sdf', type=float, default=5e-5, help='learning rate for sdf. default=5e-5.')
@@ -283,16 +284,17 @@ def get_dataset(opt, WITHHELD_VIEWS=None):
             # opt.WITHHELD_VIEWS = list(set(list(range(0, 41))) - set(opt.TRAIN_VIEWS))
             opt.TRAIN_VIEWS = [1, 9, 17, 23, 31, 38, 44]
             opt.WITHHELD_VIEWS = list(set(list(range(0, 46))) - set(opt.TRAIN_VIEWS))
-        # elif opt.dataset_name == 'nlr':
-        #     # opt.TRAIN_VIEWS = [16, 17, 18, 20, 21, 19]
-        #     opt.TRAIN_VIEWS = [16, 17, 18, 20, 21]
-        #     print('I CHNAGED NLR TRAINING VIEWS')
-        #     opt.WITHHELD_VIEWS = list(set(list(range(0, 21))) - set(opt.TRAIN_VIEWS))
         elif opt.dataset_name == 'nlr':
-            print('WARNING-------------------------------- this is for lv1 lowres!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-            opt.TRAIN_VIEWS = [0, 12, 3, 13, 7]#[0, 2, 4, 7, 9] #[0, 2, 3, 5, 7]
+            # opt.TRAIN_VIEWS = [16, 17, 18, 20, 21, 19]
+            opt.TRAIN_VIEWS = [0, 1, 3, 4, 5]
             print('I CHNAGED NLR TRAINING VIEWS')
-            opt.WITHHELD_VIEWS = list(set(list(range(0, 15))) - set(opt.TRAIN_VIEWS))
+            # opt.WITHHELD_VIEWS = list(set(list(range(0, 21))) - set(opt.TRAIN_VIEWS))
+            opt.WITHHELD_VIEWS = list(set(list(range(0, 6))) - set(opt.TRAIN_VIEWS))
+        # elif opt.dataset_name == 'nlr':
+        #     print('WARNING-------------------------------- this is for lv1 lowres!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        #     opt.TRAIN_VIEWS = [0, 1, 12, 3, 13, 7, ]#[0, 2, 4, 7, 9] #[0, 2, 3, 5, 7]
+        #     print('I CHNAGED NLR TRAINING VIEWS')
+        #     opt.WITHHELD_VIEWS = list(set(list(range(0, 15))) - set(opt.TRAIN_VIEWS))
         elif opt.dataset_name == 'nerfies':
             opt.TRAIN_VIEWS =  [0, 1, 2, 3, 4, 5, 6]# #[1, 14, 22, 36, 46, 52] oroginially for leftnew3 and i was thinking [0, 23, 34, 9, 22, 18, 33] for leftnew4 but lets try this with fewer views
             #opt.WITHHELD_VIEWS = list(set(list(range(0, 74))) - set(opt.TRAIN_VIEWS))

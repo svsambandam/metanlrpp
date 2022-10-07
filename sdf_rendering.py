@@ -606,7 +606,7 @@ def _raytrace_surface_idr(decoder: SDFIBRNet,
     Alternative sphere-tracer using IDR code.
     """
     from utils.idr.idr_ray_tracing import IDRRayTracing
-    ray_tracer = IDRRayTracing()
+    ray_tracer = IDRRayTracing(sphere_tracing_iters=decoder.opt.sphere_tracing_iters)
     ray_tracer.device = decoder.device
     ray_tracer.eval()
 
@@ -741,8 +741,6 @@ def _compute_normals(decoder: SDFIBRNet, coords: torch.Tensor, times: torch.Tens
     sdf = output['model_out'][..., :1]
 
     # Compute grad f_0
-    # print('------------------------OOM ERR1----------------------', sdf.shape, coords.shape)
-
     gradient = diff_operators.gradient(sdf, coords)
     return gradient, output['model_out']
 

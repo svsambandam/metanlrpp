@@ -21,7 +21,7 @@ feature_type = learned
 feature_aggregation_method = learned
 occlusion_method = raytrace
 source_views_per_target = 6
-total_number_source_views = 74
+total_number_source_views = 7 #74
 image_batch_size = 4
 source_view_selection_mode = random
 
@@ -55,5 +55,5 @@ precomputed_3D_point_buffers = ./assets/precomputed/nlr_SCAN_buffers.pth
 save_3D_point_buffers = 1
 load_model_poses = 1
 
-im_scale = 0.2
-load_im_scale = 0.2 #0.05882352941
+im_scale = 0.4
+load_im_scale = 0.4 #0.05882352941

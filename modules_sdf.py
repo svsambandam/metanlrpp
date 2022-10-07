@@ -494,6 +494,7 @@ class SDFIBRNet(MetaModule):
         images = []
         masks = []
         for i, view_id in enumerate(source_view_ids):
+            # print('-----modsdf497----------------------------', len(ray_builder_curr.img_dataset.frames[0].image_views), '/', view_id)
             images.append(ray_builder_curr.img_dataset.frames[0].image_views[view_id].image)
             masks.append(ray_builder_curr.img_dataset.frames[0].image_views[view_id].mask)
 
@@ -743,6 +744,7 @@ class SDFIBRNet(MetaModule):
                 source_view_ids = TRAINVIEWS + [target_view_id]
                 return source_view_ids
             else:
+                # print(self.opt.TRAIN_VIEWS.copy(), self.opt.source_views_per_target, '-----------------------------------------------')
                 source_view_ids = np.random.choice(self.opt.TRAIN_VIEWS.copy(), self.opt.source_views_per_target,
                                                    replace=False).tolist()
                 if target_view_id in source_view_ids:
@@ -957,7 +959,8 @@ class SDFIBRNet(MetaModule):
     def forward_test_custom(self, model_matrix, view_matrix, projection_matrix, resolution, vid_frame=0):
         # Get target view and source view ids, and project target view to source views.
         if self.opt.dataset_name == 'nlr':
-            source_view_ids = self.source_view_select_fn(19)
+            # source_view_ids = self.source_view_select_fn(19)
+            source_view_ids = self.source_view_select_fn(5)
         else:
             source_view_ids = self.source_view_select_fn(0)
 

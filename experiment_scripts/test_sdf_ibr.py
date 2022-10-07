@@ -106,7 +106,7 @@ def main():
         if p.get_default(k) is None and v == 'None':
             setattr(opt, k, None)
     opt.ibr_dataset = 1
-    print('HEY I CHANGED THE source_views_per_target')
+    # print('HEY I CHANGED THE source_views_per_target')
     # opt.source_views_per_target = -1
 
     opt.im_scale = 1

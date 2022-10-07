@@ -55,5 +55,5 @@ precomputed_3D_point_buffers = ./assets/precomputed/nlr_SCAN_buffers.pth
 save_3D_point_buffers = 1
 load_model_poses = 1
 
-im_scale = 0.1 #0.05
-load_im_scale = 0.1 #0.05
+im_scale = 0.08 #0.1 #0.05
+load_im_scale = 0.08 #0.1 #0.05
