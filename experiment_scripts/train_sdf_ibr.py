@@ -67,7 +67,7 @@ def get_arg_parser():
     p.add_argument('--num_epochs', type=int, default=3000, help='Number of epochs to train for.')
     p.add_argument('--lr', type=float, default=1e-4, help='learning rate. default=1e-4')
     p.add_argument('--lr_sdf', type=float, default=5e-5, help='learning rate for sdf. default=5e-5.')
-    p.add_argument('--lr_decay_factor', type=float, default=0.5, help='How omuch to decay LR.')
+    p.add_argument('--lr_decay_factor', type=float, default=0.5, help='How to much to decay LR.')
     p.add_argument('--lr_sdf_decay_steps', type=int, default=0, help='How often to decay LR.')
     p.add_argument('--lr_encdec_decay_steps', type=int, default=0, help='How often to decay LR.')
     p.add_argument('--lr_agg_decay_steps', type=int, default=0, help='How often to decay LR.')

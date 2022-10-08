@@ -89,6 +89,9 @@ class IDRRayTracing(nn.Module):
         # curr_start_points = (cam_loc + acc_start_dis.reshape(batch_size, num_pixels, 1) * ray_directions).reshape(-1, 3)
         # print('WARNING-------------- FIXED DEPTH IDR RT LINE90')
         
+        if self.training:
+            print('idrraytra93------------------------------WERE TRAINNG RAY TRACING NOWWWWWWWWWWWWWWWWWW')
+
         if not self.training:
             return curr_start_points, \
                 network_object_mask, \
