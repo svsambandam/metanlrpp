@@ -128,6 +128,8 @@ def get_arg_parser():
                    help='Use exponential band sequence for IDR encoding?')
 
     # SDF Network
+    p.add_argument('--warping', type=int, default=0,
+                   help='Use warping MLP for non-static scenes?')
     p.add_argument('--init_regularized', type=int, default=0,
                    help='Use regularized weights for the sphere init?')
     p.add_argument('--fit_sphere', type=int, default=0,
@@ -283,7 +285,7 @@ def get_dataset(opt, WITHHELD_VIEWS=None):
             # opt.TRAIN_VIEWS = [0, 6, 14, 20, 27, 34, 39] # my_dtu
             # opt.WITHHELD_VIEWS = list(set(list(range(0, 41))) - set(opt.TRAIN_VIEWS))
             opt.TRAIN_VIEWS = [1, 9, 17, 23, 31, 38, 44]
-            opt.WITHHELD_VIEWS = list(set(list(range(0, 46))) - set(opt.TRAIN_VIEWS))
+            opt.WITHHELD_VIEWS = list(set(list(range(0, 49))) - set(opt.TRAIN_VIEWS))
         elif opt.dataset_name == 'nlr':
             # opt.TRAIN_VIEWS = [16, 17, 18, 20, 21, 19]
             opt.TRAIN_VIEWS = [0, 1, 3, 4, 5]
@@ -377,7 +379,7 @@ def main():
 
     # Dataset.
     sdf_dataset = get_dataset(opt)
-    dataloader = DataLoader(sdf_dataset, shuffle=True, batch_size=1, pin_memory=True, num_workers=0)
+    dataloader = DataLoader(sdf_dataset, shuffle=True, batch_size=1, pin_memory=True, num_workers=0) ##1 8
 
     # Model.
     model = get_sdf_decoder(opt, sdf_dataset)

@@ -371,9 +371,9 @@ class SDFIBRNet(MetaModule):
         # np.save('./my_data/my_dtu/nlr/test/blue/ptsproj.npy', SneDict, allow_pickle=True)
         # np.save('./my_data/dtu_v3/processed/scan24/blue/blue.npy', SneDict, allow_pickle=True)
         # np.save('./my_data/dtu_v3/processed/scan55/blue/blue.npy', SneDict, allow_pickle=True)
-        # np.save('./my_data/my_dtu/nlr/test24/blue/blue.npy', SneDict, allow_pickle=True)
-        # np.save('./my_data/my_dtu/nlr/test55/blue/blue.npy', SneDict, allow_pickle=True)
-        np.save('./my_data/my_dtu/nlr/lv1/blue/blue.npy', SneDict, allow_pickle=True)
+        # np.save('./my_data/my_dtu/nlr/scan24/blue/blue.npy', SneDict, allow_pickle=True)
+        # np.save('./my_data/my_dtu/nlr/scan55/blue/blue.npy', SneDict, allow_pickle=True)
+        # np.save('./my_data/my_dtu/nlr/lv1/blue/blue.npy', SneDict, allow_pickle=True)
         # np.save('./my_data/my_dtu/nlr/curls/blue/blue.npy', SneDict, allow_pickle=True)
         # np.save('./my_data/nlr_processed_renamed/lv1-lowres/blue/blue.npy', SneDict, allow_pickle=True)
         # print('--------------------------------------------saved--------------------------------------------')
@@ -822,7 +822,7 @@ class SDFIBRNet(MetaModule):
     def forward_single(self, target_view_id, target_view_idx, source_view_ids,
                        source_image_features_a, computed_buffers, params=None, dataset_num=None,
                        return_dense=False, train_shape=False):
-        # target_view_id = 3
+        # target_view_id = 1
         # print('WARNING__________________________ change made at line806 on modsdf')
         projected_pos_maps_a = self.project_target_view_to_sources(target_view_id, source_view_ids, computed_buffers,
                                                                    dataset_num=dataset_num)

@@ -310,7 +310,6 @@ def _raytrace_sectioning(decoder: SDFIBRNet,
     Step the ray between two t's and find the first SDF crossing.
     Returns t before and after crossing.
     """
-    print('WE ARE USING SECANT I THINK------------------------------------------------------SDRENDERING313')
     # The last t_i before crossing
     t_i = t_min.clone().detach()
     is_ray_active = torch.ones((t_min.shape[0],)).bool().to(decoder.device)

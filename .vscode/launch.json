@@ -16,16 +16,16 @@
             // "args": ["--config_filepath", "configs/nlrpp_nlr.txt","--experiment_name","GTlv1_test","--dataset_path","/ubc/cs/research/kmyi/svsamban/research/metanlrpp/my_data/nlr_processed_renamed/lv1-lowres","--checkpoint_path_test","/ubc/cs/research/kmyi/svsamban/research/metanlrpp/logs/GTlv1_test/checkpoints"],
             // train dtu
             // "program": "experiment_scripts/train_sdf_ibr.py",
-            // "args": ["--config_filepath", "configs/nlrpp_dtu.txt","--experiment_name","MYdtu_test","--dataset_path","/ubc/cs/research/kmyi/svsamban/research/metanlrpp/my_data/dtu_v3/processed/scan55","--checkpoint_img_encoder", "/ubc/cs/research/kmyi/svsamban/research/metanlrpp/checkpoints"],
+            // "args": ["--config_filepath", "configs/nlrpp_dtu.txt","--experiment_name","MYdtu_test","--dataset_path","/ubc/cs/research/kmyi/svsamban/research/metanlrpp/my_data/dtu_v3/processed/scan24","--checkpoint_img_encoder", "/ubc/cs/research/kmyi/svsamban/research/metanlrpp/checkpoints"],
             // test dtu
             // "program": "experiment_scripts/test_sdf_ibr.py",
-            // "args": ["--config_filepath", "configs/nlrpp_dtu.txt","--experiment_name","MYdtu_test","--dataset_path","/ubc/cs/research/kmyi/svsamban/research/metanlrpp/my_data/dtu_v3/processed/scan55","--checkpoint_path_test","/ubc/cs/research/kmyi/svsamban/research/metanlrpp/logs/MYdtu_test/checkpoints"],
+            // "args": ["--config_filepath", "configs/nlrpp_dtu.txt","--experiment_name","MYdtu_test","--dataset_path","/ubc/cs/research/kmyi/svsamban/research/metanlrpp/my_data/dtu_v3/processed/scan24","--checkpoint_path_test","/ubc/cs/research/kmyi/svsamban/research/metanlrpp/logs/MYdtu_test/checkpoints"],
             // train MYdtu
             // "program": "experiment_scripts/train_sdf_ibr.py",
-            // "args": ["--config_filepath", "configs/nlrpp_dtu.txt","--experiment_name","MYdtu_test","--dataset_path","/ubc/cs/research/kmyi/svsamban/research/metanlrpp/my_data/my_dtu/nlr/test55","--checkpoint_img_encoder", "/ubc/cs/research/kmyi/svsamban/research/metanlrpp/checkpoints"],
+            // "args": ["--config_filepath", "configs/nlrpp_dtu.txt","--experiment_name","MYdtu_test","--dataset_path","/ubc/cs/research/kmyi/svsamban/research/metanlrpp/my_data/my_dtu/nlr/test","--checkpoint_img_encoder", "/ubc/cs/research/kmyi/svsamban/research/metanlrpp/checkpoints", "--sphere_tracing_iters", "0"],
             // test MYdtu
-            // "program": "experiment_scripts/test_sdf_ibr.py",
-            // "args": ["--config_filepath", "configs/nlrpp_dtu.txt","--experiment_name","MYdtu_test","--dataset_path","/ubc/cs/research/kmyi/svsamban/research/metanlrpp/my_data/my_dtu/nlr/test55","--checkpoint_path_test","/ubc/cs/research/kmyi/svsamban/research/metanlrpp/logs/MYdtu_test/checkpoints"],
+            "program": "experiment_scripts/test_sdf_ibr.py",
+            "args": ["--config_filepath", "configs/nlrpp_dtu.txt","--experiment_name","MYdtu_test","--dataset_path","/ubc/cs/research/kmyi/svsamban/research/metanlrpp/my_data/my_dtu/nlr/test","--checkpoint_path_test","/ubc/cs/research/kmyi/svsamban/research/metanlrpp/logs/MYdtu_test/checkpoints", "--sphere_tracing_iters", "0"],
             // train MYnlr
             // "program": "experiment_scripts/train_sdf_ibr.py",
             // "args": ["--config_filepath", "configs/nlrpp_mynlr.txt","--experiment_name","MYlv1_largbatch_lowres","--dataset_path","/ubc/cs/research/kmyi/svsamban/research/metanlrpp/my_data/my_dtu/nlr/lv1","--checkpoint_img_encoder", "/ubc/cs/research/kmyi/svsamban/research/metanlrpp/checkpoints"],
@@ -33,11 +33,11 @@
             // "program": "experiment_scripts/test_sdf_ibr.py",
             // "args": ["--config_filepath", "configs/nlrpp_mynlr.txt","--experiment_name","MYlv1_test","--dataset_path","/ubc/cs/research/kmyi/svsamban/research/metanlrpp/my_data/my_dtu/nlr/lv1","--checkpoint_path_test","/ubc/cs/research/kmyi/svsamban/research/metanlrpp/logs/MYlv1_test/checkpoints"],
             // train nerfies
-            "program": "experiment_scripts/train_sdf_ibr.py",
-            "args": ["--config_filepath", "configs/nlrpp_nerfies.txt","--experiment_name","MYcurls_secant","--dataset_path","/ubc/cs/research/kmyi/svsamban/research/metanlrpp/my_data/my_dtu/nlr/curls","--checkpoint_img_encoder", "/ubc/cs/research/kmyi/svsamban/research/metanlrpp/checkpoints", "--sphere_tracing_iters", "0"],
+            // "program": "experiment_scripts/train_sdf_ibr.py",
+            // "args": ["--config_filepath", "configs/nlrpp_nerfies.txt","--experiment_name","MYcurls_test","--dataset_path","/ubc/cs/research/kmyi/svsamban/research/metanlrpp/my_data/my_dtu/nlr/curls","--checkpoint_img_encoder", "/ubc/cs/research/kmyi/svsamban/research/metanlrpp/checkpoints", "--sphere_tracing_iters", "10"],
             // test nerfies
             // "program": "experiment_scripts/test_sdf_ibr.py",
-            // "args": ["--config_filepath", "configs/nlrpp_nerfies.txt","--experiment_name","MYcurls_secant","--dataset_path","/ubc/cs/research/kmyi/svsamban/research/metanlrpp/my_data/my_dtu/nlr/curls","--checkpoint_path_test","/ubc/cs/research/kmyi/svsamban/research/metanlrpp/logs/MYcurls_secant/checkpoints", "--sphere_tracing_iters", "0"],
+            // "args": ["--config_filepath", "configs/nlrpp_nerfies.txt","--experiment_name","MYcurls_test","--dataset_path","/ubc/cs/research/kmyi/svsamban/research/metanlrpp/my_data/my_dtu/nlr/curls","--checkpoint_path_test","/ubc/cs/research/kmyi/svsamban/research/metanlrpp/logs/MYcurls_test/checkpoints", "--sphere_tracing_iters", "0"],
             //
             "console": "integratedTerminal",
             "justMyCode": true,
