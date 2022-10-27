@@ -75,7 +75,7 @@ def train(model, train_dataloader, epochs, lr, steps_til_summary, epochs_til_che
             for step, (model_input, gt) in enumerate(train_dataloader):
                 start_time = time.time()
 
-                print('TRAIN ID:',model_input['target_view_id'])
+                # print('TRAIN ID:',model_input['target_view_id'])
 
                 # Override inputs for verbose record iter 0
                 if verbose_record is not None and total_steps == verbose_record['step']:
