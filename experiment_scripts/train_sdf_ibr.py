@@ -120,6 +120,8 @@ def get_arg_parser():
     # Positional encoding.
     p.add_argument('--posenc_sdf', type=str, default='none',
                    help='Positional encoding for SDF [none|nerf|idr|ff].')
+    p.add_argument('--posenc_warp_sdf', type=str, default='none',
+                   help='Positional encoding for warp SDF [none|nerf|idr|ff].')
     p.add_argument('--posenc_sdf_bands', type=int, default=0,
                    help='Number of pos enc bands.')
     p.add_argument('--posenc_sdf_sigma', type=float, default=1,
@@ -285,7 +287,7 @@ def get_dataset(opt, WITHHELD_VIEWS=None):
             # opt.TRAIN_VIEWS = [0, 6, 14, 20, 27, 34, 39] # my_dtu
             # opt.WITHHELD_VIEWS = list(set(list(range(0, 41))) - set(opt.TRAIN_VIEWS))
             opt.TRAIN_VIEWS = [1, 9, 17, 23, 31, 38, 44]
-            opt.WITHHELD_VIEWS = list(set(list(range(0, 49))) - set(opt.TRAIN_VIEWS))
+            opt.WITHHELD_VIEWS = list(set(list(range(0, 46))) - set(opt.TRAIN_VIEWS))
         elif opt.dataset_name == 'nlr':
             # opt.TRAIN_VIEWS = [16, 17, 18, 20, 21, 19]
             opt.TRAIN_VIEWS = [0, 1, 3, 4, 5]

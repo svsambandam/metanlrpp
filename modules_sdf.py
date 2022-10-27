@@ -64,6 +64,7 @@ class SDFIBRNet(MetaModule):
 
         # Positional encoding.
         positional_encoding = [opt.posenc_sdf]
+        warp_positional_encoding = [opt.posenc_warp_sdf]
         positional_encoding_kwargs = [
             {
                 'num_bands': opt.posenc_sdf_bands,
@@ -86,7 +87,10 @@ class SDFIBRNet(MetaModule):
                                          activation=activation[i],
                                          activation_last=activation_last[i],
                                          positional_encoding=positional_encoding[i],
-                                         positional_encoding_kwargs=positional_encoding_kwargs[i])
+                                         positional_encoding_kwargs=positional_encoding_kwargs[i],
+                                         warping=opt.warping,
+                                         warp_positional_encoding=warp_positional_encoding[i], 
+                                         warp_positional_encoding_kwargs=positional_encoding_kwargs[i])
                          for i in range(len(decoders_cls))]
         self.decoder_sdf = self.decoders[0]
 

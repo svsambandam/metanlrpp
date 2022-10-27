@@ -117,6 +117,8 @@ def get_arg_parser():
     # Positional encoding.
     p.add_argument('--posenc_sdf', type=str, default='none',
                    help='Positional encoding for SDF [none|nerf|idr|ff].')
+    p.add_argument('--posenc_warp_sdf', type=str, default='none',
+                   help='Positional encoding for warp SDF [none|nerf|idr|ff].')
     p.add_argument('--posenc_sdf_bands', type=int, default=0,
                    help='Number of pos enc bands.')
     p.add_argument('--posenc_sdf_sigma', type=float, default=1,
@@ -125,6 +127,8 @@ def get_arg_parser():
                    help='Use exponential band sequence for IDR encoding?')
 
     # SDF Network
+    p.add_argument('--warping', type=int, default=0,
+                   help='Use warping MLP for non-static scenes?')
     p.add_argument('--init_regularized', type=int, default=0,
                    help='Use regularized weights for the sphere init?')
     p.add_argument('--fit_sphere', type=int, default=0,

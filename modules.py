@@ -210,7 +210,9 @@ class SingleBVPNet(MetaModule):
                  in_features=2, hidden_features=256, out_features=1,
                  num_hidden_layers=3, skip_connections=[],
                  activation='sine', activation_last='none',
-                 positional_encoding=None, positional_encoding_kwargs={}):
+                 positional_encoding=None, positional_encoding_kwargs={},
+                 warping=0,
+                 warp_positional_encoding=None, warp_positional_encoding_kwargs={}):
         super().__init__()
         self.opt = opt
         self.activation = activation
@@ -224,6 +226,19 @@ class SingleBVPNet(MetaModule):
             self.positional_encoding = self.get_positional_encoding(
                 positional_encoding, in_features, positional_encoding_kwargs)
             in_features = self.positional_encoding.out_dim
+
+        # Use pos encoding for NERF network or on explicit demand for any network.
+        self.warping = warping
+        self.warp_net = None
+        if self.warping and warp_positional_encoding is not None and warp_positional_encoding != 'none':
+            self.warp_positional_encoding = self.get_positional_encoding(
+                warp_positional_encoding, in_features, warp_positional_encoding_kwargs)
+            warp_in_features = self.warp_positional_encoding.out_dim
+            self.warp_net = FCBlock(in_features=warp_in_features, out_features=in_features, 
+                           num_hidden_layers=num_hidden_layers,
+                           hidden_features=hidden_features, outermost_linear=True,
+                           activation=activation, activation_last=activation_last,
+                           skip_connections=skip_connections)
 
         self.net = FCBlock(in_features=in_features, out_features=out_features, num_hidden_layers=num_hidden_layers,
                            hidden_features=hidden_features, outermost_linear=True,
@@ -300,6 +315,11 @@ class SDFDecoder(SingleBVPNet):
         # Optional positional encoding.
         if self.positional_encoding is not None:
             coords = self.positional_encoding(coords)
+
+        # Optional warp with positional encoding.
+        if self.warping and self.warp_positional_encoding is not None and self.warp_net is not None:
+            coords = self.warp_positional_encoding(coords)
+            coords = self.warp_net(coords)
 
         # The core net.
         output = self.net(coords, get_subdict(params, 'net'))
