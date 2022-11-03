@@ -211,8 +211,8 @@ class SingleBVPNet(MetaModule):
                  num_hidden_layers=3, skip_connections=[],
                  activation='sine', activation_last='none',
                  positional_encoding=None, positional_encoding_kwargs={},
-                 warping=0,
-                 warp_positional_encoding=None, warp_positional_encoding_kwargs={}):
+                 warping=0, warp_positional_encoding=None, 
+                 posenc_warp_sdf_type='none', warp_positional_encoding_kwargs={}):
         super().__init__()
         self.opt = opt
         self.activation = activation
@@ -229,16 +229,29 @@ class SingleBVPNet(MetaModule):
 
         # Use pos encoding for NERF network or on explicit demand for any network.
         self.warping = warping
+        self.warp_positional_encoding = None
         self.warp_net = None
+        self.posenc_warp_sdf_type = posenc_warp_sdf_type
         if self.warping and warp_positional_encoding is not None and warp_positional_encoding != 'none':
-            self.warp_positional_encoding = self.get_positional_encoding(
-                warp_positional_encoding, in_features, warp_positional_encoding_kwargs)
-            warp_in_features = self.warp_positional_encoding.out_dim
-            self.warp_net = FCBlock(in_features=warp_in_features, out_features=in_features, 
-                           num_hidden_layers=num_hidden_layers,
-                           hidden_features=hidden_features, outermost_linear=True,
-                           activation=activation, activation_last=activation_last,
-                           skip_connections=skip_connections)
+            if self.posenc_warp_sdf_type == 'coords':
+                self.warp_positional_encoding = self.get_positional_encoding(
+                    warp_positional_encoding, in_features, warp_positional_encoding_kwargs)
+                warp_in_features = self.warp_positional_encoding.out_dim
+                self.warp_net = FCBlock(in_features=warp_in_features, out_features=in_features, 
+                            num_hidden_layers=num_hidden_layers,
+                            hidden_features=hidden_features, outermost_linear=True,
+                            activation=activation, activation_last=activation_last,
+                            skip_connections=skip_connections)
+            if self.posenc_warp_sdf_type == 'target_view_id':
+                warp_positional_encoding_kwargs['fn_samples']=1
+                self.warp_positional_encoding = self.get_positional_encoding(
+                    warp_positional_encoding, 1, warp_positional_encoding_kwargs)
+                warp_in_features = self.warp_positional_encoding.out_dim*3 + in_features
+                self.warp_net = FCBlock(in_features=warp_in_features, out_features=in_features, 
+                            num_hidden_layers=num_hidden_layers,
+                            hidden_features=hidden_features, outermost_linear=True,
+                            activation=activation, activation_last=activation_last,
+                            skip_connections=skip_connections)
 
         self.net = FCBlock(in_features=in_features, out_features=out_features, num_hidden_layers=num_hidden_layers,
                            hidden_features=hidden_features, outermost_linear=True,
@@ -318,8 +331,16 @@ class SDFDecoder(SingleBVPNet):
 
         # Optional warp with positional encoding.
         if self.warping and self.warp_positional_encoding is not None and self.warp_net is not None:
-            coords = self.warp_positional_encoding(coords)
-            coords = self.warp_net(coords)
+            if self.posenc_warp_sdf_type == 'coords':
+                coords = self.warp_positional_encoding(coords)
+                coords = self.warp_net(coords)                
+            if self.posenc_warp_sdf_type == 'target_view_id':
+                pos_enc = self.warp_positional_encoding(coords)
+                # print('-----------------------------------------mods340:', pos_enc.shape,coords.shape)
+                pos_enc = pos_enc.reshape((pos_enc.shape[0], coords.shape[1], -1))
+                # print('-----------------------------------------mods340:', pos_enc.shape,coords.shape)
+                coords = torch.cat((coords,pos_enc),axis=2)
+                coords = self.warp_net(coords)
 
         # The core net.
         output = self.net(coords, get_subdict(params, 'net'))
@@ -348,9 +369,9 @@ class PosEncodingNeRF(nn.Module):
             if use_nyquist:
                 self.num_frequencies = self.get_num_frequencies_nyquist(min(sidelength[0], sidelength[1]))
         elif self.in_features == 1:
-            assert fn_samples is not None
             self.num_frequencies = 4
             if use_nyquist:
+                assert fn_samples is not None
                 self.num_frequencies = self.get_num_frequencies_nyquist(fn_samples)
 
         self.out_dim = in_features + 2 * in_features * self.num_frequencies

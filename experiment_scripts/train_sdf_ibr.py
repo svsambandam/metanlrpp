@@ -122,6 +122,8 @@ def get_arg_parser():
                    help='Positional encoding for SDF [none|nerf|idr|ff].')
     p.add_argument('--posenc_warp_sdf', type=str, default='none',
                    help='Positional encoding for warp SDF [none|nerf|idr|ff].')
+    p.add_argument('--posenc_warp_sdf_type', type=str, default='none',
+                   help='Input typefor positional encoding for warp SDF [none|target_view_id|coords].')
     p.add_argument('--posenc_sdf_bands', type=int, default=0,
                    help='Number of pos enc bands.')
     p.add_argument('--posenc_sdf_sigma', type=float, default=1,
