@@ -242,6 +242,8 @@ class SingleBVPNet(MetaModule):
                             hidden_features=hidden_features, outermost_linear=True,
                             activation=activation, activation_last=activation_last,
                             skip_connections=skip_connections)
+                torch.nn.init.uniform_(self.warp_net.__dict__['_modules']['net'][-1][0].bias, -1e-4, 1e-4)
+                torch.nn.init.uniform_(self.warp_net.__dict__['_modules']['net'][-1][0].weight, -1e-4, 1e-4)
             if self.posenc_warp_sdf_type == 'target_view_id':
                 warp_positional_encoding_kwargs['fn_samples']=1
                 self.warp_positional_encoding = self.get_positional_encoding(
@@ -252,6 +254,9 @@ class SingleBVPNet(MetaModule):
                             hidden_features=hidden_features, outermost_linear=True,
                             activation=activation, activation_last=activation_last,
                             skip_connections=skip_connections)
+                torch.nn.init.uniform_(self.warp_net.__dict__['_modules']['net'][-1][0].bias, -1e-4, 1e-4)
+                torch.nn.init.uniform_(self.warp_net.__dict__['_modules']['net'][-1][0].weight, -1e-4, 1e-4)
+
 
         self.net = FCBlock(in_features=in_features, out_features=out_features, num_hidden_layers=num_hidden_layers,
                            hidden_features=hidden_features, outermost_linear=True,
@@ -325,13 +330,10 @@ class SDFDecoder(SingleBVPNet):
         # Apply flow if possible.
         coords = self._apply_flow(coords, model_input.get('time', None))
 
-        # Optional positional encoding.
-        if self.positional_encoding is not None:
-            coords = self.positional_encoding(coords)
-
         # Optional warp with positional encoding.
         if self.warping and self.warp_positional_encoding is not None and self.warp_net is not None:
             if self.posenc_warp_sdf_type == 'coords':
+                raise(NotImplementedError)
                 coords = self.warp_positional_encoding(coords)
                 coords = self.warp_net(coords)                
             if self.posenc_warp_sdf_type == 'target_view_id':
@@ -339,8 +341,13 @@ class SDFDecoder(SingleBVPNet):
                 # print('-----------------------------------------mods340:', pos_enc.shape,coords.shape)
                 pos_enc = pos_enc.reshape((pos_enc.shape[0], coords.shape[1], -1))
                 # print('-----------------------------------------mods340:', pos_enc.shape,coords.shape)
-                coords = torch.cat((coords,pos_enc),axis=2)
-                coords = self.warp_net(coords)
+                coords_enc = torch.cat((coords,pos_enc),axis=2)
+                warp = self.warp_net(coords_enc)
+                coords = coords + warp
+
+        # Optional positional encoding.
+        if self.positional_encoding is not None:
+            coords = self.positional_encoding(coords)
 
         # The core net.
         output = self.net(coords, get_subdict(params, 'net'))
