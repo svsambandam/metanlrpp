@@ -23,13 +23,13 @@ SDF_THRESHOLD = 5e-5
 SDF_THRESHOLD_RELAXED = SDF_THRESHOLD * 1e2
 
 
-def _sdf(decoder: SDFIBRNet, coords: torch.Tensor, times: torch.Tensor, batch_size: int, params=None):
+def _sdf(decoder: SDFIBRNet, coords: torch.Tensor, times: torch.Tensor, batch_size: int, meta: int, params=None):
     """
     Shortcut method to compute SDF.
     """
     output = modules.batch_decode(
         decoder.decoder_sdf,                    # Only use sdf decoder - more efficient.
-        {'coords': coords[None, ...], 'time': times[None, ...]},
+        {'coords': coords[None, ...], 'time': times[None, ...], 'meta': meta},
         batch_size, out_feature_slice=slice(0, 1),
         return_inputs=False, params=get_subdict(params, 'decoder_sdf'))
     return output['model_out'][0, ...]
@@ -214,7 +214,8 @@ def _raytrace_from_t(decoder: SDFIBRNet,
                      batch_size: int,
                      debug=False,
                      debug_gui=False,
-                     params=None):
+                     params=None, 
+                     meta=None):
     """
     One-directional sphere tracing from a given starting t0.
     Returns argmin t and min |sdf|.
@@ -241,12 +242,12 @@ def _raytrace_from_t(decoder: SDFIBRNet,
         coords = rays_o + current_t * rays_d
         if i == 0:
             # Compute SDF for all rays.
-            sdf = _sdf(decoder, coords, times, batch_size, params=params)
+            sdf = _sdf(decoder, coords, times, batch_size, params=params, meta=meta)
         else:
             # Update SDF only for not done rays.
             sdf[is_ray_active, :] = _sdf(decoder, coords[is_ray_active, ...],
                                          times[is_ray_active, ...], batch_size,
-                                         params=params)
+                                         params=params, meta=meta)
 
         # Update last good t
         sign_t = torch.sign(sdf)[..., 0]
@@ -305,7 +306,8 @@ def _raytrace_sectioning(decoder: SDFIBRNet,
                          num_steps: int,
                          batch_size: int,
                          debug: bool = False,
-                         params=None):
+                         params=None, 
+                         meta=None):
     """
     Step the ray between two t's and find the first SDF crossing.
     Returns t before and after crossing.
@@ -331,12 +333,12 @@ def _raytrace_sectioning(decoder: SDFIBRNet,
         coords = rays_o + current_t * rays_d
         if i == 0:
             # Compute SDF for all rays.
-            sdf = _sdf(decoder, coords, times, batch_size, params=params)
+            sdf = _sdf(decoder, coords, times, batch_size, params=params, meta=meta)
         else:
             # Update SDF only for not done rays.
             sdf[is_ray_active, :] = _sdf(decoder, coords[is_ray_active, ...],
                                          times[is_ray_active, ...], batch_size,
-                                         params=params)
+                                         params=params, meta=meta)
 
         if i == 0:
             # First step.
@@ -384,7 +386,8 @@ def _raytrace_secant(decoder: SDFIBRNet,
                      t_1: torch.Tensor,
                      num_steps: int,
                      batch_size: int,
-                     params=None):
+                     params=None,
+                     meta=None):
     """
     Does bisection to find exact SDF crossing.
     Returns argmin t.
@@ -399,10 +402,10 @@ def _raytrace_secant(decoder: SDFIBRNet,
     argmin_t = t_0.clone().detach()
     argmin_t_sdf = torch.zeros_like(t_0).fill_(1e20).to(decoder.device).requires_grad_(False)
 
-    def sdf_t(t):
-        return _sdf(decoder, rays_o + t * rays_d, times, batch_size, params=params)
-    sdf_0 = sdf_t(t_0)
-    sdf_1 = sdf_t(t_1)
+    def sdf_t(t, meta=None):
+        return _sdf(decoder, rays_o + t * rays_d, times, batch_size, params=params, meta=meta)
+    sdf_0 = sdf_t(t_0, meta=meta)
+    sdf_1 = sdf_t(t_1, meta=meta)
 
     for i in range(num_steps):
         # Choose mid point.
@@ -441,7 +444,8 @@ def _raytrace_surface(decoder: SDFIBRNet,
                       batch_size: int,
                       debug=False,
                       debug_gui=False,
-                      params=None):
+                      params=None, 
+                      meta=None):
     # mode = 'sinesdf'
     mode = 'idr'
     if mode == 'sinesdf':
@@ -455,7 +459,8 @@ def _raytrace_surface(decoder: SDFIBRNet,
             batch_size=batch_size,
             debug=debug,
             debug_gui=debug_gui,
-            params=params)
+            params=params, 
+            meta=meta)
     else:
         return _raytrace_surface_idr(
             decoder=decoder,
@@ -467,7 +472,8 @@ def _raytrace_surface(decoder: SDFIBRNet,
             batch_size=batch_size,
             debug=debug,
             debug_gui=debug_gui,
-            params=params)
+            params=params, 
+            meta=meta)
 
 
 def _raytrace_surface_sinesdf(decoder: SDFIBRNet,
@@ -479,7 +485,8 @@ def _raytrace_surface_sinesdf(decoder: SDFIBRNet,
                               batch_size: int,
                               debug=False,
                               debug_gui=False,
-                              params=None):
+                              params=None, 
+                              meta=None):
     """
     Returns surface points and their validity.
     Code from NLR.
@@ -493,10 +500,10 @@ def _raytrace_surface_sinesdf(decoder: SDFIBRNet,
         t_min, t_min, t_max,
         decoder.opt.rt_step_alpha * 1,
         batch_size, debug, debug_gui,
-        params=params)
+        params=params, meta=meta)
 
     # Check which rays need 2nd pass
-    min_sdf_0 = _sdf(decoder, rays_o + argmin_t_0 * rays_d, times, batch_size, params=params)
+    min_sdf_0 = _sdf(decoder, rays_o + argmin_t_0 * rays_d, times, batch_size, params=params, meta=meta)
     needs_2nd_pass = torch.abs(min_sdf_0) >= SDF_THRESHOLD
     # If the did not leave the volume, and did not converge, then trace it again.
     needs_2nd_pass = torch.logical_and(needs_2nd_pass, torch.logical_and(argmin_t_0 >= t_min, argmin_t_0 <= t_max))
@@ -521,7 +528,7 @@ def _raytrace_surface_sinesdf(decoder: SDFIBRNet,
             t_max_div, t_min_div, t_max_div,
             decoder.opt.rt_step_alpha * -1,
             batch_size, debug, debug_gui,
-            params=params)
+            params=params, meta=meta)
 
         # Remove rays that are too much crossed.
         t_diff = argmin_t_1 - argmin_t_0_div
@@ -543,7 +550,8 @@ def _raytrace_surface_sinesdf(decoder: SDFIBRNet,
                                               decoder.opt.rt_num_section_steps,
                                               batch_size,
                                               debug=False,
-                                              params=params)
+                                              params=params, 
+                                              meta=meta)
 
         # Secant algorithm to find in between.
         if debug:
@@ -553,7 +561,7 @@ def _raytrace_surface_sinesdf(decoder: SDFIBRNet,
                                         rays_o_div, rays_d_div, times_div,
                                         sec_t0, sec_t1,
                                         decoder.opt.rt_num_secant_steps, batch_size,
-                                        params=params)
+                                        params=params, meta=meta)
 
         # Merge convergent and divergent
         argmin_t = argmin_t_0
@@ -569,7 +577,7 @@ def _raytrace_surface_sinesdf(decoder: SDFIBRNet,
             raise Exception('NaN in raytracer!')
 
         # Check if finally converged
-        min_sdf = _sdf(decoder, coords, times, batch_size, params=params)
+        min_sdf = _sdf(decoder, coords, times, batch_size, params=params, meta=meta)
 
     else:
         # Use the forward pass.
@@ -600,7 +608,8 @@ def _raytrace_surface_idr(decoder: SDFIBRNet,
                           batch_size: int,
                           debug=False,
                           debug_gui=False,
-                          params=None):
+                          params=None, 
+                          meta=None):
     """
     Alternative sphere-tracer using IDR code.
     """
@@ -609,13 +618,13 @@ def _raytrace_surface_idr(decoder: SDFIBRNet,
     ray_tracer.device = decoder.device
     ray_tracer.eval()
 
-    def idr_sdf(x): return _sdf(decoder, x, times, batch_size, params=params)[..., 0]
+    def idr_sdf(x, meta): return _sdf(decoder, x, times, batch_size, params=params, meta=meta)[..., 0]
     object_mask = torch.ones((rays_d.shape[0],)).bool().to(decoder.device)
     points, network_object_mask, dists = ray_tracer(
-        sdf=idr_sdf, cam_loc=rays_o[None, ...], object_mask=object_mask, ray_directions=rays_d[None, ...])
+        sdf=idr_sdf, cam_loc=rays_o[None, ...], object_mask=object_mask, ray_directions=rays_d[None, ...], meta=meta)
     coords = points
     argmin_t = dists[..., None]
-    min_sdf = _sdf(decoder, coords, times, batch_size, params=params)
+    min_sdf = _sdf(decoder, coords, times, batch_size, params=params, meta=meta)
     is_converged = network_object_mask
 
     return {
@@ -635,7 +644,8 @@ def _raytrace_surface_differentiable(decoder: SDFIBRNet,
                                      batch_size: int,
                                      debug=False,
                                      debug_gui=False,
-                                     params=None):
+                                     params=None, 
+                                     meta=None):
     """
     Differentiable sphere tracing based on:
     https://arxiv.org/abs/2003.09852
@@ -646,10 +656,10 @@ def _raytrace_surface_differentiable(decoder: SDFIBRNet,
                                     rays_o, rays_d, times,
                                     t_min, t_max,
                                     batch_size, debug, debug_gui,
-                                    params=params)
+                                    params=params, meta=meta)
 
     # Compute grad f_0
-    gradient_0, output_0 = _compute_normals(decoder, surface['coords'], times, params=params)
+    gradient_0, output_0 = _compute_normals(decoder, surface['coords'], times, params=params, meta=meta)
     sdf_0 = output_0[0, ..., :1]
 
     # Compute Lemma 1 to get differentiable surface coords
@@ -679,7 +689,8 @@ def _raytrace_differentiable_mask(decoder: SDFIBRNet,
                                   batch_size: int,
                                   params=None,
                                   t_min_computed=None,
-                                  is_valid_mask=None):
+                                  is_valid_mask=None, 
+                                  meta=None):
     """
     Trace the closest t for the "Masked rendering"
     See Sec. 3.3 in https://arxiv.org/abs/2003.09852
@@ -699,7 +710,7 @@ def _raytrace_differentiable_mask(decoder: SDFIBRNet,
             # Query the network.
             current_t = t_min + i * dt
             coords = rays_o + current_t * rays_d
-            sdf = _sdf(decoder, coords, times, batch_size, params=params)
+            sdf = _sdf(decoder, coords, times, batch_size, params=params, meta=meta)
 
             # Update argmin t
             argmin_t_sdf_new = torch.min(argmin_t_sdf, sdf)  # No abs()
@@ -712,7 +723,7 @@ def _raytrace_differentiable_mask(decoder: SDFIBRNet,
 
     # Evaluate min sdf
     coords = rays_o + argmin_t * rays_d
-    min_sdf = _sdf(decoder, coords, times, batch_size, params=params)
+    min_sdf = _sdf(decoder, coords, times, batch_size, params=params, meta=meta)
 
     # Compute soft mask (Eq. 7)
     mask = torch.sigmoid(-decoder.opt.rt_mask_alpha * min_sdf)
@@ -725,7 +736,7 @@ def _raytrace_differentiable_mask(decoder: SDFIBRNet,
 
 
 @torch.enable_grad()
-def _compute_normals(decoder: SDFIBRNet, coords: torch.Tensor, times: torch.Tensor = None,
+def _compute_normals(decoder: SDFIBRNet, coords: torch.Tensor, times: torch.Tensor = None, meta=None,
                      params=None):
     """
     Computes differentiable normals for the SDF.
@@ -736,7 +747,7 @@ def _compute_normals(decoder: SDFIBRNet, coords: torch.Tensor, times: torch.Tens
     if not coords.requires_grad:
         coords.requires_grad_(True)
     # If times are provided, the coords are local and we need to convert to key.
-    output = decoder.decoder_sdf({'coords': coords[None, ...]}, params=get_subdict(params, 'decoder_sdf'))
+    output = decoder.decoder_sdf({'coords': coords[None, ...], 'meta': meta}, params=get_subdict(params, 'decoder_sdf'))
     sdf = output['model_out'][..., :1]
 
     # Compute grad f_0
@@ -778,7 +789,7 @@ def _compute_depth(coords: torch.Tensor, view_matrix: torch.Tensor, projection_m
 
 
 def _batched_normals(decoder: SDFIBRNet, coords: torch.Tensor, times: torch.Tensor, batch_size: int,
-                     params=None):
+                     params=None, meta=None):
     """
     Computes normals for the surface. Uses batching and is not differentiable.   
     Will apply flow (T->T0) if needed and will differentiate wrt original coords at T.
@@ -807,7 +818,7 @@ def _batched_normals(decoder: SDFIBRNet, coords: torch.Tensor, times: torch.Tens
         coords = coords.detach().requires_grad_(True)
 
     # Query the network. Capture outputs using callback.
-    model_input = {'coords': coords[None, ...], 'time': times[None, ...]}
+    model_input = {'coords': coords[None, ...], 'time': times[None, ...], 'meta': meta}
     with torch.enable_grad():
         modules.batch_decode(decoder.decoder_sdf, model_input, batch_size, callback=append_normals,
                              params=get_subdict(params, 'decoder_sdf'))
@@ -823,7 +834,8 @@ def render_view_proj_differentiable(decoder: SDFIBRNet,
                                     timestamp: float,
                                     batch_size: int,
                                     debug_gui: bool = False,
-                                    params=None):
+                                    params=None, 
+                                    meta=None):
     """
     Renders preview of SDF from a given view with gradients.
     """
@@ -846,7 +858,7 @@ def render_view_proj_differentiable(decoder: SDFIBRNet,
     # Ray-trace.
     rt_res = _raytrace_surface_differentiable(decoder, rays_o, rays_d, times, t_min, t_max,
                                               batch_size, debug=False, debug_gui=debug_gui,
-                                              params=params)
+                                              params=params, meta=meta)
     # print(f'Ray tracing took {time.time() - t_start:.3f} seconds.')
     coords = rt_res['coords']
     is_valid = rt_res['is_valid']
@@ -877,7 +889,8 @@ def render_view_proj_differentiable(decoder: SDFIBRNet,
                                              rays_o, rays_d, times,
                                              t_min, t_max, batch_size,
                                              params=params,
-                                             t_min_computed=t_min_comp, is_valid_mask=is_valid)
+                                             t_min_computed=t_min_comp, is_valid_mask=is_valid,
+                                             meta=meta)
     soft_mask = mask_res['mask'].reshape(h, w)
 
     return {
@@ -900,7 +913,8 @@ def render_view_proj(decoder: SDFIBRNet,
                      debug_gui: bool = False,
                      params=None,
                      normals=False,
-                     vid_frame=0):
+                     vid_frame=0, 
+                     meta=None):
     """
     Renders preview of SDF from a given view without gradients.
     """
@@ -923,7 +937,7 @@ def render_view_proj(decoder: SDFIBRNet,
     # Ray-trace.
     rt_res = _raytrace_surface(decoder, rays_o, rays_d, times, t_min, t_max,
                                batch_size, debug=False, debug_gui=debug_gui,
-                               params=params)
+                               params=params, meta=meta)
     # print(f'Ray tracing took {time.time() - t_start:.3f} seconds.')
     coords = rt_res['coords']
     is_valid = rt_res['is_valid']
@@ -949,7 +963,7 @@ def render_view_proj(decoder: SDFIBRNet,
     # Normals in local frame coords.
     normals_local = None
     if normals:
-        normals_local = _batched_normals(decoder, coords, times, batch_size, params=params)
+        normals_local = _batched_normals(decoder, coords, times, batch_size, params=params, meta=meta)
         normals_local = normals_local.reshape(h, w, 3)
 
     return {

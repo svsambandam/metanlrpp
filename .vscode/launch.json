@@ -4,6 +4,7 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+
         {
             "name": "Python: Test",
             "type": "python",
@@ -36,11 +37,11 @@
             // train nerfies
             "program": "experiment_scripts/train_sdf_ibr.py",
             "args": ["--config_filepath", "configs/nlrpp_nerfies.txt","--experiment_name","MYcurls_test","--dataset_path","/ubc/cs/research/kmyi/svsamban/research/metanlrpp/my_data/my_dtu/nlr/curls","--checkpoint_img_encoder", "/ubc/cs/research/kmyi/svsamban/research/metanlrpp/checkpoints", 
-            "--sphere_tracing_iters", "0","--warping", "1", "--posenc_warp_sdf", "nerf", "--posenc_warp_sdf_type", "target_view_id"],
+            "--sphere_tracing_iters", "0","--warping", "None", "--posenc_warp_sdf", "nerf", "--posenc_warp_sdf_type", "target_view_id", "--hyperwarp", "0", "--hyper_dim", "2"],
             // test nerfies
             // "program": "experiment_scripts/test_sdf_ibr.py",
             // "args": ["--config_filepath", "configs/nlrpp_nerfies.txt","--experiment_name","MYcurls_test","--dataset_path","/ubc/cs/research/kmyi/svsamban/research/metanlrpp/my_data/my_dtu/nlr/curls","--checkpoint_path_test","/ubc/cs/research/kmyi/svsamban/research/metanlrpp/logs/MYcurls_test/checkpoints", 
-            // "--sphere_tracing_iters", "0","--warping", "1", "--posenc_warp_sdf", "nerf", "--posenc_warp_sdf_type", "target_view_id"],
+            // "--sphere_tracing_iters", "0","--warping", "None", "--posenc_warp_sdf", "nerf", "--posenc_warp_sdf_type", "target_view_id", "--hyperwarp", "0", "--hyper_dim", "2"],
             //
             "console": "integratedTerminal",
             "justMyCode": true,

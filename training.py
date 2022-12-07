@@ -89,6 +89,8 @@ def train(model, train_dataloader, epochs, lr, steps_til_summary, epochs_til_che
                         v = v.requires_grad_(True)
                     model_input[k] = v
 
+                
+
                 gt = {key: value.to(device) for key, value in gt.items()}
 
                 # If teacher exists, override GT.

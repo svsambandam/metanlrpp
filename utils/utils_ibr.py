@@ -150,7 +150,8 @@ def _write_summary_ray_trace(opt, dataset, model: SDFIBRNet, model_input, gt, mo
                                        render_softmask=render_softmask,
                                        build_pcd=False,
                                        batch_size=opt.batch_size,
-                                       params=params)
+                                       params=params, 
+                                       meta=model_input['meta'])
 
     # Measure PCD error if possible.
     coords = dataset.dataset_pcd.get_frame_coords(frame_index)
@@ -184,7 +185,7 @@ def write_sdf_color_summary(opt, dataset, model, model_input, gt, model_output, 
 
     # Write summary of shape, pcd error, normals, etc... from the reference view.
     if total_steps % 400 == 0:
-        _write_summary_ray_trace(opt, dataset, model, None, None, None, writer, total_steps, prefix, False)
+        _write_summary_ray_trace(opt, dataset, model, model_input, None, None, writer, total_steps, prefix, False)
 
 
 @torch.no_grad()
@@ -200,11 +201,11 @@ def write_sdf_color_summary_mult(opt, dataset, model, model_input, gt, model_out
     _write_feature_summary(opt, None, None, None, None, model_out_single, writer, total_steps, prefix)
 
     # 2D SDF slices summary.
-    utils_sdf._write_summary_sdf_slices(opt, model, None, None, None, writer, total_steps, prefix)
+    utils_sdf._write_summary_sdf_slices(opt, model, model_input, None, None, writer, total_steps, prefix)
 
     # Write summary of shape, pcd error, normals, etc... from the reference view.
     if total_steps % 400 == 0:
-        _write_summary_ray_trace(opt, dataset, model, None, None, None, writer, total_steps, prefix, False)
+        _write_summary_ray_trace(opt, dataset, model, model_input, None, None, writer, total_steps, prefix, False)
 
 
 @ torch.no_grad()

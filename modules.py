@@ -11,6 +11,9 @@ import utils.activations as activations
 import utils.common_utils as common_utils
 import utils.diff_operators as diff_operators
 import utils.math_utils_torch as mut
+from se3 import types
+from se3 import rigid_body as rigid
+from functorch import jacfwd, vmap
 
 
 class BatchLinear(nn.Linear, MetaModule):
@@ -211,13 +214,18 @@ class SingleBVPNet(MetaModule):
                  num_hidden_layers=3, skip_connections=[],
                  activation='sine', activation_last='none',
                  positional_encoding=None, positional_encoding_kwargs={},
-                 warping=0, warp_positional_encoding=None, 
-                 posenc_warp_sdf_type='none', warp_positional_encoding_kwargs={}):
+                 warping=None, warp_positional_encoding=None, 
+                 posenc_warp_sdf_type='none', warp_positional_encoding_kwargs={}, 
+                 hyperwarp=False, ambient_dim=0):
         super().__init__()
         self.opt = opt
+        self.hyperwarp = hyperwarp
+        self.ambient_dim = ambient_dim
+        if self.hyperwarp:
+            self.ambient_dim = 0
         self.activation = activation
         self.activation_last = activation_last
-        self.in_features = in_features
+        self.in_features = in_features + self.ambient_dim
         self.out_features = out_features
 
         # Use pos encoding for NERF network or on explicit demand for any network.
@@ -227,43 +235,69 @@ class SingleBVPNet(MetaModule):
                 positional_encoding, in_features, positional_encoding_kwargs)
             in_features = self.positional_encoding.out_dim
 
-        # Use pos encoding for NERF network or on explicit demand for any network.
-        self.warping = warping
-        self.warp_positional_encoding = None
-        self.warp_net = None
-        self.posenc_warp_sdf_type = posenc_warp_sdf_type
-        if self.warping and warp_positional_encoding is not None and warp_positional_encoding != 'none':
-            if self.posenc_warp_sdf_type == 'coords':
-                self.warp_positional_encoding = self.get_positional_encoding(
-                    warp_positional_encoding, in_features, warp_positional_encoding_kwargs)
-                warp_in_features = self.warp_positional_encoding.out_dim
-                self.warp_net = FCBlock(in_features=warp_in_features, out_features=in_features, 
-                            num_hidden_layers=num_hidden_layers,
-                            hidden_features=hidden_features, outermost_linear=True,
-                            activation=activation, activation_last=activation_last,
-                            skip_connections=skip_connections)
-                torch.nn.init.uniform_(self.warp_net.__dict__['_modules']['net'][-1][0].bias, -1e-4, 1e-4)
-                torch.nn.init.uniform_(self.warp_net.__dict__['_modules']['net'][-1][0].weight, -1e-4, 1e-4)
-            if self.posenc_warp_sdf_type == 'target_view_id':
-                warp_positional_encoding_kwargs['fn_samples']=1
-                self.warp_positional_encoding = self.get_positional_encoding(
-                    warp_positional_encoding, 1, warp_positional_encoding_kwargs)
-                warp_in_features = self.warp_positional_encoding.out_dim*3 + in_features
-                self.warp_net = FCBlock(in_features=warp_in_features, out_features=in_features, 
-                            num_hidden_layers=num_hidden_layers,
-                            hidden_features=hidden_features, outermost_linear=True,
-                            activation=activation, activation_last=activation_last,
-                            skip_connections=skip_connections)
-                torch.nn.init.uniform_(self.warp_net.__dict__['_modules']['net'][-1][0].bias, -1e-4, 1e-4)
-                torch.nn.init.uniform_(self.warp_net.__dict__['_modules']['net'][-1][0].weight, -1e-4, 1e-4)
-
-
         self.net = FCBlock(in_features=in_features, out_features=out_features, num_hidden_layers=num_hidden_layers,
                            hidden_features=hidden_features, outermost_linear=True,
                            activation=activation, activation_last=activation_last,
                            skip_connections=skip_connections)
 
         self.flow_decoder = []
+
+
+        # WARPING.
+        self.warping = warping
+        self.warp_positional_encoding = None
+        self.warp_net = None
+        self.posenc_warp_sdf_type = posenc_warp_sdf_type
+        if self.posenc_warp_sdf_type == 'target_view_id':
+            meta_dim = 1
+        elif self.posenc_warp_sdf_type == 'coords':
+            meta_dim = 3
+        else:
+            raise(KeyError)
+
+        if self.warping is not None and warp_positional_encoding is not None and warp_positional_encoding != 'none':
+            warp_positional_encoding_kwargs['fn_samples']=1
+            self.warp_positional_encoding = self.get_positional_encoding(
+                warp_positional_encoding, meta_dim, warp_positional_encoding_kwargs)
+            warp_in_features = self.warp_positional_encoding.out_dim*meta_dim + in_features
+            if self.warping == 'translation':
+                self.warp_net = FCBlock(in_features=warp_in_features, out_features=3, 
+                            num_hidden_layers=4,
+                            hidden_features=256, outermost_linear=True,
+                            activation=activation, activation_last=activation_last,
+                            skip_connections=skip_connections)
+                torch.nn.init.uniform_(self.warp_net.__dict__['_modules']['net'][-1][0].bias, -1e-4, 1e-4)
+                torch.nn.init.uniform_(self.warp_net.__dict__['_modules']['net'][-1][0].weight, -1e-4, 1e-4)
+            elif self.warping == 'SE3Field':
+                self.warp_trunk = FCBlock(in_features=warp_in_features, out_features=128, 
+                            num_hidden_layers=6,
+                            hidden_features=128, outermost_linear=True,
+                            activation='relu', activation_last=activation_last,
+                            skip_connections=[[0,4]])
+                self.warp_w = FCBlock(in_features=128, out_features=in_features, 
+                            num_hidden_layers=0, outermost_linear=True,
+                            activation='relu', activation_last=activation_last)
+                self.warp_v = FCBlock(in_features=128, out_features=in_features, 
+                            num_hidden_layers=0, outermost_linear=True,
+                            activation='relu', activation_last=activation_last)
+                torch.nn.init.uniform_(self.warp_w.__dict__['_modules']['net'][-1][0].bias, -1e-4, 1e-4)
+                torch.nn.init.uniform_(self.warp_w.__dict__['_modules']['net'][-1][0].weight, -1e-4, 1e-4)
+                torch.nn.init.uniform_(self.warp_v.__dict__['_modules']['net'][-1][0].bias, -1e-4, 1e-4)
+                torch.nn.init.uniform_(self.warp_v.__dict__['_modules']['net'][-1][0].weight, -1e-4, 1e-4)
+            else:
+                raise(KeyError)
+        if self.hyperwarp and warp_positional_encoding != 'none':
+            warp_positional_encoding_kwargs['fn_samples']=1
+            self.warp_positional_encoding = self.get_positional_encoding(
+                warp_positional_encoding, meta_dim, warp_positional_encoding_kwargs)
+            hyperwarp_in_features = self.warp_positional_encoding.out_dim*meta_dim + in_features
+            self.hyperwarp_net = FCBlock(in_features=hyperwarp_in_features, out_features=self.ambient_dim, 
+                        num_hidden_layers=4,
+                        hidden_features=64, outermost_linear=True,
+                        activation=activation, activation_last=activation_last,
+                        skip_connections=[[0,4]])
+            torch.nn.init.uniform_(self.hyperwarp_net.__dict__['_modules']['net'][-1][0].bias, -1e-4, 1e-4)
+            torch.nn.init.uniform_(self.hyperwarp_net.__dict__['_modules']['net'][-1][0].weight, -1e-4, 1e-4)
 
     @ classmethod
     def get_positional_encoding(cls, positional_encoding: str, in_features: int, enc_kwargs: dict) -> nn.Module:
@@ -327,23 +361,53 @@ class SDFDecoder(SingleBVPNet):
         model_in = model_input['coords']
         coords = model_in
 
+        if self.posenc_warp_sdf_type == 'target_view_id':
+            meta = model_input['meta']*torch.ones_like(model_in[...,:1])
+        else:
+            raise(NotImplementedError)
+
         # Apply flow if possible.
         coords = self._apply_flow(coords, model_input.get('time', None))
 
         # Optional warp with positional encoding.
-        if self.warping and self.warp_positional_encoding is not None and self.warp_net is not None:
-            if self.posenc_warp_sdf_type == 'coords':
-                raise(NotImplementedError)
-                coords = self.warp_positional_encoding(coords)
-                coords = self.warp_net(coords)                
-            if self.posenc_warp_sdf_type == 'target_view_id':
-                pos_enc = self.warp_positional_encoding(coords)
-                # print('-----------------------------------------mods340:', pos_enc.shape,coords.shape)
-                pos_enc = pos_enc.reshape((pos_enc.shape[0], coords.shape[1], -1))
-                # print('-----------------------------------------mods340:', pos_enc.shape,coords.shape)
-                coords_enc = torch.cat((coords,pos_enc),axis=2)
+        if self.warping is not None and self.warp_positional_encoding is not None and self.warp_net is not None:     
+            pos_enc = self.warp_positional_encoding(meta)
+            coords_enc = torch.cat((coords,pos_enc),axis=-1)        
+            if self.warping == 'translation':
                 warp = self.warp_net(coords_enc)
                 coords = coords + warp
+            elif self.warping == 'SE3Field':
+                trunk_output = self.warp_trunk(coords_enc)
+                w = self.warp_w(trunk_output)
+                v = self.warp_v(trunk_output)
+                
+                theta = torch.linalg.norm(w, dim=-1, keepdim=True)
+                w = w / theta
+                v = v / theta
+
+                screw_axis = torch.cat([w, v], dim=-1)
+                if len(screw_axis.shape) == 1 or screw_axis.shape[0] == 0.:
+                    N = 1
+                    B = 1
+                elif len(screw_axis.shape) == 2:
+                    N,_ = screw_axis.shape
+                    B = 1
+                else:
+                    B,N,_ = screw_axis.shape
+                exp_se3 = vmap(rigid.exp_se3)
+                transform = exp_se3(screw_axis.reshape(B*N,-1), theta.reshape(B*N,-1)).reshape(B,N,4,4)
+
+                warped_points = rigid.from_homogenous(
+                    torch.bmm(transform.reshape(B*N,4,4), 
+                    rigid.to_homogenous(model_in).reshape(B*N,4,1)).reshape(B*N,4))
+                coords = warped_points
+            else:
+                raise(NotImplementedError)
+
+        if self.hyperwarp:    
+            ambient_coords = self.hyperwarp_net(coords_enc)
+            coords = torch.cat((coords, ambient_coords), axis=-1)
+
 
         # Optional positional encoding.
         if self.positional_encoding is not None:

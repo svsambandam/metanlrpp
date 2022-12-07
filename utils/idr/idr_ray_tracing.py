@@ -33,7 +33,8 @@ class IDRRayTracing(nn.Module):
                 sdf,
                 cam_loc,
                 object_mask,
-                ray_directions
+                ray_directions, 
+                meta=None
                 ):
 
         batch_size, num_pixels, _ = ray_directions.shape
@@ -43,7 +44,7 @@ class IDRRayTracing(nn.Module):
 
         curr_start_points, unfinished_mask_start, acc_start_dis, acc_end_dis, min_dis, max_dis = \
             self.sphere_tracing(batch_size, num_pixels, sdf, cam_loc,
-                                ray_directions, mask_intersect, sphere_intersections)
+                                ray_directions, mask_intersect, sphere_intersections, meta=meta)
 
         network_object_mask = (acc_start_dis < acc_end_dis)
 
@@ -60,7 +61,8 @@ class IDRRayTracing(nn.Module):
                                                                                 object_mask,
                                                                                 ray_directions,
                                                                                 sampler_min_max,
-                                                                                sampler_mask
+                                                                                sampler_mask, 
+                                                                                meta=meta
                                                                                 )
 
             curr_start_points[sampler_mask] = sampler_pts[sampler_mask]
@@ -118,7 +120,7 @@ class IDRRayTracing(nn.Module):
             min_dis[network_object_mask & out_mask] = acc_start_dis[network_object_mask & out_mask]
 
             min_mask_points, min_mask_dist = self.minimal_sdf_points(
-                num_pixels, sdf, cam_loc, ray_directions, mask, min_dis, max_dis)
+                num_pixels, sdf, cam_loc, ray_directions, mask, min_dis, max_dis, meta=meta)
 
             curr_start_points[mask] = min_mask_points
             acc_start_dis[mask] = min_mask_dist
@@ -127,7 +129,7 @@ class IDRRayTracing(nn.Module):
             network_object_mask, \
             acc_start_dis
 
-    def sphere_tracing(self, batch_size, num_pixels, sdf, cam_loc, ray_directions, mask_intersect, sphere_intersections):
+    def sphere_tracing(self, batch_size, num_pixels, sdf, cam_loc, ray_directions, mask_intersect, sphere_intersections, meta):
         ''' Run sphere tracing algorithm for max iterations from both sides of unit sphere intersection '''
 
         sphere_intersections_points = cam_loc.reshape(
@@ -157,10 +159,10 @@ class IDRRayTracing(nn.Module):
         iters = 0
 
         next_sdf_start = torch.zeros_like(acc_start_dis).cuda()
-        next_sdf_start[unfinished_mask_start] = sdf(curr_start_points[unfinished_mask_start])
+        next_sdf_start[unfinished_mask_start] = sdf(curr_start_points[unfinished_mask_start], meta=meta)
 
         next_sdf_end = torch.zeros_like(acc_end_dis).cuda()
-        next_sdf_end[unfinished_mask_end] = sdf(curr_end_points[unfinished_mask_end])
+        next_sdf_end[unfinished_mask_end] = sdf(curr_end_points[unfinished_mask_end], meta=meta)
 
         while True:
             # Update sdf
@@ -193,10 +195,10 @@ class IDRRayTracing(nn.Module):
 
             # Fix points which wrongly crossed the surface
             next_sdf_start = torch.zeros_like(acc_start_dis).cuda()
-            next_sdf_start[unfinished_mask_start] = sdf(curr_start_points[unfinished_mask_start])
+            next_sdf_start[unfinished_mask_start] = sdf(curr_start_points[unfinished_mask_start], meta=meta)
 
             next_sdf_end = torch.zeros_like(acc_end_dis).cuda()
-            next_sdf_end[unfinished_mask_end] = sdf(curr_end_points[unfinished_mask_end])
+            next_sdf_end[unfinished_mask_end] = sdf(curr_end_points[unfinished_mask_end], meta=meta)
 
             not_projected_start = next_sdf_start < 0
             not_projected_end = next_sdf_end < 0
@@ -214,8 +216,8 @@ class IDRRayTracing(nn.Module):
                     cam_loc + acc_end_dis.reshape(batch_size, num_pixels, 1) * ray_directions).reshape(-1, 3)[not_projected_end]
 
                 # Calc sdf
-                next_sdf_start[not_projected_start] = sdf(curr_start_points[not_projected_start])
-                next_sdf_end[not_projected_end] = sdf(curr_end_points[not_projected_end])
+                next_sdf_start[not_projected_start] = sdf(curr_start_points[not_projected_start], meta=meta)
+                next_sdf_end[not_projected_end] = sdf(curr_end_points[not_projected_end], meta=meta)
 
                 # Update mask
                 not_projected_start = next_sdf_start < 0
@@ -227,7 +229,7 @@ class IDRRayTracing(nn.Module):
 
         return curr_start_points, unfinished_mask_start, acc_start_dis, acc_end_dis, min_dis, max_dis
 
-    def ray_sampler(self, sdf, cam_loc, object_mask, ray_directions, sampler_min_max, sampler_mask):
+    def ray_sampler(self, sdf, cam_loc, object_mask, ray_directions, sampler_min_max, sampler_mask, meta=None):
         ''' Sample the ray in a given range and run secant on rays which have sign transition '''
 
         batch_size, num_pixels, _ = ray_directions.shape
@@ -249,7 +251,7 @@ class IDRRayTracing(nn.Module):
 
         sdf_val_all = []
         for pnts in torch.split(points.reshape(-1, 3), 100000, dim=0):
-            sdf_val_all.append(sdf(pnts))
+            sdf_val_all.append(sdf(pnts, meta=meta))
         sdf_val = torch.cat(sdf_val_all).reshape(-1, self.n_steps)
 
         tmp = torch.sign(sdf_val) * torch.arange(self.n_steps, 0, -1).cuda().float().reshape((1,
@@ -286,7 +288,7 @@ class IDRRayTracing(nn.Module):
             sdf_low = sdf_val[secant_pts][torch.arange(n_secant_pts), sampler_pts_ind[secant_pts] - 1]
             cam_loc_secant = cam_loc.reshape((-1, 3))[mask_intersect_idx[secant_pts]]
             ray_directions_secant = ray_directions.reshape((-1, 3))[mask_intersect_idx[secant_pts]]
-            z_pred_secant = self.secant(sdf_low, sdf_high, z_low, z_high, cam_loc_secant, ray_directions_secant, sdf)
+            z_pred_secant = self.secant(sdf_low, sdf_high, z_low, z_high, cam_loc_secant, ray_directions_secant, sdf, meta=meta)
 
             # Get points
             sampler_pts[mask_intersect_idx[secant_pts]] = cam_loc_secant + \
@@ -295,13 +297,13 @@ class IDRRayTracing(nn.Module):
 
         return sampler_pts, sampler_net_obj_mask, sampler_dists
 
-    def secant(self, sdf_low, sdf_high, z_low, z_high, cam_loc, ray_directions, sdf):
+    def secant(self, sdf_low, sdf_high, z_low, z_high, cam_loc, ray_directions, sdf, meta):
         ''' Runs the secant method for interval [z_low, z_high] for n_secant_steps '''
 
         z_pred = - sdf_low * (z_high - z_low) / (sdf_high - sdf_low) + z_low
         for i in range(self.n_secant_steps):
             p_mid = cam_loc + z_pred.unsqueeze(-1) * ray_directions
-            sdf_mid = sdf(p_mid)
+            sdf_mid = sdf(p_mid, meta=meta)
             ind_low = sdf_mid > 0
             if ind_low.sum() > 0:
                 z_low[ind_low] = z_pred[ind_low]
@@ -315,7 +317,7 @@ class IDRRayTracing(nn.Module):
 
         return z_pred
 
-    def minimal_sdf_points(self, num_pixels, sdf, cam_loc, ray_directions, mask, min_dis, max_dis):
+    def minimal_sdf_points(self, num_pixels, sdf, cam_loc, ray_directions, mask, min_dis, max_dis, meta):
         ''' Find points with minimal SDF value on rays for P_out pixels '''
 
         n_mask_points = mask.sum()
@@ -336,7 +338,7 @@ class IDRRayTracing(nn.Module):
 
         mask_sdf_all = []
         for pnts in torch.split(points, 100000, dim=0):
-            mask_sdf_all.append(sdf(pnts))
+            mask_sdf_all.append(sdf(pnts, meta=meta))
 
         mask_sdf_all = torch.cat(mask_sdf_all).reshape(-1, n)
         min_vals, min_idx = mask_sdf_all.min(-1)

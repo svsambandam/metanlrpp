@@ -130,8 +130,12 @@ def get_arg_parser():
                    help='Use exponential band sequence for IDR encoding?')
 
     # SDF Network
-    p.add_argument('--warping', type=int, default=0,
+    p.add_argument('--warping', type=str, default=None,
                    help='Use warping MLP for non-static scenes?')
+    p.add_argument('--hyperwarp', type=int, default=0,
+                   help='Use hyperwarp MLP for non-static scenes? 1 for yes, 0 for no')
+    p.add_argument('--hyper_dim', type=int, default=0,
+                   help='How many ambient dimensions used in hyperwarp MLP?')
     p.add_argument('--init_regularized', type=int, default=0,
                    help='Use regularized weights for the sphere init?')
     p.add_argument('--fit_sphere', type=int, default=0,

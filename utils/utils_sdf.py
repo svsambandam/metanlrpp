@@ -31,6 +31,7 @@ def _write_summary_sdf_slices(opt, model: SDFIBRNet, model_input, gt, model_outp
     # YZ slice.
     yz_slice_coords = torch.cat((torch.zeros_like(slice_coords_2d[:, :1]), slice_coords_2d), dim=-1)
     yz_slice_model_input = {'coords': yz_slice_coords.to(model.device)[None, ...]}
+    yz_slice_model_input['meta'] = model_input['meta']
     yz_model_out = batch_decode(model.decoder_sdf, yz_slice_model_input,
                                 batch_size=opt.batch_size, out_feature_slice=slice(0, 1),
                                 params=get_subdict(params, 'decoder_sdf'))
@@ -45,6 +46,7 @@ def _write_summary_sdf_slices(opt, model: SDFIBRNet, model_input, gt, model_outp
                                  torch.zeros_like(slice_coords_2d[:, :1]),
                                  slice_coords_2d[:, -1:]), dim=-1)
     xz_slice_model_input = {'coords': xz_slice_coords.to(model.device)[None, ...]}
+    xz_slice_model_input['meta'] = model_input['meta']
     xz_model_out = batch_decode(model.decoder_sdf, xz_slice_model_input,
                                 batch_size=opt.batch_size, out_feature_slice=slice(0, 1),
                                 params=get_subdict(params, 'decoder_sdf'))
@@ -58,6 +60,7 @@ def _write_summary_sdf_slices(opt, model: SDFIBRNet, model_input, gt, model_outp
     xy_slice_coords = torch.cat((slice_coords_2d[:, :2],
                                  torch.zeros_like(slice_coords_2d[:, :1])), dim=-1)
     xy_slice_model_input = {'coords': xy_slice_coords.to(model.device)[None, ...]}
+    xy_slice_model_input['meta'] = model_input['meta']
     xy_model_out = batch_decode(model.decoder_sdf, xy_slice_model_input,
                                 batch_size=opt.batch_size, out_feature_slice=slice(0, 1),
                                 params=get_subdict(params, 'decoder_sdf'))

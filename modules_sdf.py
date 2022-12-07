@@ -92,7 +92,8 @@ class SDFIBRNet(MetaModule):
                                          warping=opt.warping,
                                          warp_positional_encoding=warp_positional_encoding[i], 
                                          posenc_warp_sdf_type=posenc_warp_sdf_type[i],
-                                         warp_positional_encoding_kwargs=positional_encoding_kwargs[i])
+                                         warp_positional_encoding_kwargs=positional_encoding_kwargs[i], 
+                                         hyperwarp=opt.hyperwarp, ambient_dim=opt.hyper_dim)
                          for i in range(len(decoders_cls))]
         self.decoder_sdf = self.decoders[0]
 
@@ -278,14 +279,21 @@ class SDFIBRNet(MetaModule):
 
             # Only need gradient for computation of target view. Rest are used for finding masks.
             # if grad and view_id == source_view_ids[-1]:
+
+            if self.opt.posenc_warp_sdf_type == 'target_view_id':
+                meta=view_id
+            elif self.opt.posenc_warp_sdf_type is None or self.opt.posenc_warp_sdf_type == 'none':
+                meta = None
+            else:
+                raise(KeyError)
             if grad:
                 res = sdf_rendering.render_view_proj_differentiable(self, resolution, model_matrix, view_matrix,
-                                                                    proj_matrix, -1, batch_size=0, params=params)
+                                                                    proj_matrix, -1, batch_size=0, params=params, meta=meta)
                 precomputed_buffers[view_id] = res
             else:
                 print('viewid: ', view_id)
                 res = sdf_rendering.render_view_proj(self, resolution, model_matrix, view_matrix,
-                                                     proj_matrix, -1, batch_size=0, params=params)
+                                                     proj_matrix, -1, batch_size=0, params=params, meta=meta)
                 precomputed_buffers[view_id] = {'pos': res['pos']}
 
         return precomputed_buffers
@@ -816,6 +824,7 @@ class SDFIBRNet(MetaModule):
                 computed_buffers_old[key] = {'pos': computed_buffers_new[key]['pos'].detach()}
 
         # Get SDF points to supervise priors on SDF
+        model_input['meta'] = model_input[self.opt.posenc_warp_sdf_type] 
         sdf_out = self.decoder_sdf.forward(model_input, params=get_subdict(params, 'decoder_sdf'))['model_out']
 
         return {'trgt_outputs': trgt_imgs,
@@ -962,7 +971,7 @@ class SDFIBRNet(MetaModule):
         return source_view_ids
 
     @torch.no_grad()
-    def forward_test_custom(self, model_matrix, view_matrix, projection_matrix, resolution, vid_frame=0):
+    def forward_test_custom(self, model_matrix, view_matrix, projection_matrix, resolution, vid_frame=0, meta=None):
         # Get target view and source view ids, and project target view to source views.
         if self.opt.dataset_name == 'nlr':
             # source_view_ids = self.source_view_select_fn(19)
@@ -977,7 +986,7 @@ class SDFIBRNet(MetaModule):
         computed_buffers = self.precomputed_buffers
         trgt_res = sdf_rendering.render_view_proj(self, torch.from_numpy(resolution).cuda(), model_matrix.cuda(),
                                                   view_matrix.cuda(), projection_matrix.cuda(), -1, batch_size=0,
-                                                  vid_frame=vid_frame)
+                                                  vid_frame=vid_frame, meta=meta)
         projected_pos_maps_a = self.project_target_view_to_sources(trgt_res, source_view_ids)
 
         valid_mask = trgt_res['mask']

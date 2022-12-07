@@ -32,7 +32,7 @@ from torchmeta.modules.utils import get_subdict
 
 
 @torch.enable_grad()
-def plot_sdf(decoder: SDFIBRNet, params=None):
+def plot_sdf(decoder: SDFIBRNet, params=None, meta=None):
     """
     Draws the SDF plot for the center-most vertex.
     front = min(z) (z axis points away)
@@ -43,7 +43,7 @@ def plot_sdf(decoder: SDFIBRNet, params=None):
     samples = samples.to(decoder.device)
     samples.requires_grad = True
 
-    output = decoder.decoder_sdf({'coords': samples[None, ...]}, params=get_subdict(params, 'decoder_sdf'))
+    output = decoder.decoder_sdf({'coords': samples[None, ...], 'meta': 0}, params=get_subdict(params, 'decoder_sdf'))
     y = output['model_out'][0, ..., :1]
     grad = diff_operators.gradient(y, output['model_in'])[0, ...]
     try:
@@ -85,7 +85,7 @@ def _render_slice(decoder, resolution: int, axes: tuple, data_type: str, batch_s
     else:
         out_slice = None
 
-    model_in = {'coords': slice_coords_3d.to(decoder.device)[None, ...]}
+    model_in = {'coords': slice_coords_3d.to(decoder.device)[None, ...], 'meta': 0}
 
     model_out = modules.batch_decode(decoder, model_in, batch_size=batch_size, out_feature_slice=out_slice)
     values = model_out['model_out']
@@ -340,7 +340,8 @@ def raytrace_sdf_ibr(decoder: SDFIBRNet,
                      background_color=[1.0, 1.0, 1.0],
                      close_hole_size=1,
                      params=None,
-                     vid_frame=0):
+                     vid_frame=0,
+                     meta=None):
     """
     Raytrace the SDF.
     Generate vizualizations projected into image plane.
@@ -368,7 +369,8 @@ def raytrace_sdf_ibr(decoder: SDFIBRNet,
                                             debug_gui=debug_gui,
                                             params=params,
                                             normals=True,
-                                            vid_frame=vid_frame)
+                                            vid_frame=vid_frame, 
+                                            meta=meta)
 
     res = {
         'raw': output,
@@ -474,7 +476,8 @@ def raytrace_video_ibr(output_path_base: str,
                        batch_size,
                        render_diffuse=False,  # Additional diffuse color.
                        save_frames=False,
-                       debug_gui=False):
+                       debug_gui=False, 
+                       meta=None):
     """
     Ray-traces general space-time video frame afer frame into a video file.
     """
@@ -505,9 +508,10 @@ def raytrace_video_ibr(output_path_base: str,
                                   debug_gui=debug_gui,
                                   background_color=(1, 1, 1),
                                   close_hole_size=3,
-                                  vid_frame=i)
+                                  vid_frame=i, 
+                                  meta=meta)
 
-        render_ibr = decoder.forward_test_custom(model_matrix, view_matrix, projection_matrix, resolution, vid_frame=i)
+        render_ibr = decoder.forward_test_custom(model_matrix, view_matrix, projection_matrix, resolution, vid_frame=i, meta=meta)
         render['viz']['colors'] = render_ibr['target_img'].squeeze().permute(1,2,0).cpu().numpy()
 
         render['viz']['valid_mask'] = render_ibr['valid_mask'].squeeze().unsqueeze(-1).cpu().numpy()

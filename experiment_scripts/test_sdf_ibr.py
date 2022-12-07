@@ -50,7 +50,8 @@ def raytrace_view(filename,
                   model: modules_sdf.SDFIBRNet,
                   dataset: dataio_sdf.DatasetSDF,
                   view: ImageView,
-                  timestamp: float = common_utils.KEY_FRAME_TIME):
+                  timestamp: float = common_utils.KEY_FRAME_TIME,
+                  meta=None):
 
     view_size = (view.resolution * opt.im_scale + 0.5).astype(int)
     projection_matrix = view.projection_matrix
@@ -72,7 +73,8 @@ def raytrace_view(filename,
                                        render_softmask=False,
                                        batch_size=opt.batch_size,
                                        debug_gui=False,
-                                       timestamp=timestamp)
+                                       timestamp=timestamp, 
+                                       meta=meta)
 
     if dataset.coords.shape[0] > 0:
         # Compute 3D errror.
@@ -166,8 +168,12 @@ def main():
     print(f'Reference view = {opt.reference_view} => {dataset.reference_view_index}')
 
     # Plot SDF.
+    if opt.posenc_warp_sdf_type == 'target_view_id':
+        meta = 0.
+    else:
+        meta = None
     if opt.test_plot:
-        fig = sdf_meshing.plot_sdf(model)
+        fig = sdf_meshing.plot_sdf(model, meta=meta)
         plt.savefig(str(out_filename) + '_plot.png')
         plt.close(fig)
 
@@ -178,7 +184,7 @@ def main():
     # Execute the tracer.
     if opt.test_rt:
         raytrace_view(str(out_filename) + f'_view_{dataset.reference_view_index:02d}',
-                      opt, model, dataset, dataset.reference_view, common_utils.KEY_FRAME_TIME)
+                      opt, model, dataset, dataset.reference_view, common_utils.KEY_FRAME_TIME, meta=meta)
 
     # Ray trace video of view swipe through time.
     if opt.test_spacetime_video:
@@ -197,7 +203,8 @@ def main():
                                        batch_size=opt.batch_size,
                                        render_diffuse=False,
                                        save_frames=opt.video_save_frames,
-                                       debug_gui=False)
+                                       debug_gui=False, 
+                                       meta=meta)
 
     # Compute metrics.
     if opt.test_metrics:
