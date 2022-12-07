@@ -36,15 +36,15 @@
             // "args": ["--config_filepath", "configs/nlrpp_mynlr.txt","--experiment_name","MYlv1_test","--dataset_path","/ubc/cs/research/kmyi/svsamban/research/metanlrpp/my_data/my_dtu/nlr/lv1","--checkpoint_path_test","/ubc/cs/research/kmyi/svsamban/research/metanlrpp/logs/MYlv1_test/checkpoints"],
             // train nerfies
             "program": "experiment_scripts/train_sdf_ibr.py",
-            "args": ["--config_filepath", "configs/nlrpp_nerfies.txt","--experiment_name","MYcurls_test",
+            "args": ["--config_filepath", "configs/nlrpp_nerfies.txt","--experiment_name","MYcurls_se3",
             "--dataset_path","/ubc/cs/research/kmyi/svsamban/research/metanlrpp/my_data/my_dtu/nlr/curls",
             "--checkpoint_img_encoder", "/ubc/cs/research/kmyi/svsamban/research/metanlrpp/checkpoints", 
             "--sphere_tracing_iters", "0","--warping", "SE3Field", "--posenc_warp_sdf", "nerf", "--posenc_warp_sdf_type", 
-            "target_view_id", "--hyperwarp", "1", "--hyper_dim", "2", "--dataset_name", "curls"],
+            "target_view_id", "--hyperwarp", "0", "--hyper_dim", "2", "--dataset_name", "curls"],
             // test nerfies
             // "program": "experiment_scripts/test_sdf_ibr.py",
             // "args": ["--config_filepath", "configs/nlrpp_nerfies.txt","--experiment_name","MYcurls_test","--dataset_path","/ubc/cs/research/kmyi/svsamban/research/metanlrpp/my_data/my_dtu/nlr/curls","--checkpoint_path_test","/ubc/cs/research/kmyi/svsamban/research/metanlrpp/logs/MYcurls_test/checkpoints", 
-            // "--sphere_tracing_iters", "0","--warping", "SE3Field", "--posenc_warp_sdf", "nerf", "--posenc_warp_sdf_type", "target_view_id", "--hyperwarp", "1", "--hyper_dim", "2", "--dataset_name", "curls],
+            // "--sphere_tracing_iters", "0","--warping", "SE3Field", "--posenc_warp_sdf", "nerf", "--posenc_warp_sdf_type", "target_view_id", "--hyperwarp", "1", "--hyper_dim", "0", "--dataset_name", "curls],
             //
             "console": "integratedTerminal",
             "justMyCode": true,

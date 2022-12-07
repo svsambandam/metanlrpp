@@ -418,6 +418,8 @@ class SDFDecoder(SingleBVPNet):
             coords = self.positional_encoding(coords)
 
         # The core net.
+        if len(coords.shape)==2:
+            coords = coords.unsqueeze(0)
         output = self.net(coords, get_subdict(params, 'net'))
         return {'model_in': model_in, 'model_out': output}
 
