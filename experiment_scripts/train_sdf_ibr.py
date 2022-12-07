@@ -305,10 +305,13 @@ def get_dataset(opt, WITHHELD_VIEWS=None):
         #     opt.TRAIN_VIEWS = [0, 1, 12, 3, 13, 7, ]#[0, 2, 4, 7, 9] #[0, 2, 3, 5, 7]
         #     print('I CHNAGED NLR TRAINING VIEWS')
         #     opt.WITHHELD_VIEWS = list(set(list(range(0, 15))) - set(opt.TRAIN_VIEWS))
-        elif opt.dataset_name == 'nerfies':
-            opt.TRAIN_VIEWS =  [0, 1, 2, 3, 4, 5, 6]# #[1, 14, 22, 36, 46, 52] oroginially for leftnew3 and i was thinking [0, 23, 34, 9, 22, 18, 33] for leftnew4 but lets try this with fewer views
-            #opt.WITHHELD_VIEWS = list(set(list(range(0, 74))) - set(opt.TRAIN_VIEWS))
-            opt.WITHHELD_VIEWS = list(set(list(range(0, 21))) - set(opt.TRAIN_VIEWS))
+        elif opt.dataset_name == 'curls':
+            opt.TRAIN_VIEWS =  [0, 15, 26, 28, 30, 34, 44]
+            opt.WITHHELD_VIEWS = list(set(list(range(0, 50))) - set(opt.TRAIN_VIEWS))
+        elif opt.dataset_name == 'toby':
+            raise(NotImplementedError)
+            opt.TRAIN_VIEWS =  [0, 15, 26, 28, 30, 34, 44]
+            opt.WITHHELD_VIEWS = list(set(list(range(0, 50))) - set(opt.TRAIN_VIEWS))
         elif opt.dataset_name == 'mynlr':
             opt.TRAIN_VIEWS =  [0, 12, 3, 13, 7 ]#[0, 2, 4, 7, 9]
             opt.WITHHELD_VIEWS = list(set(list(range(0, 15))) - set(opt.TRAIN_VIEWS))

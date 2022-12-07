@@ -112,7 +112,9 @@ class SDFIBRNet(MetaModule):
                     filename = 'sphere_sine128x5'
                 elif self.opt.dataset_name == 'nlr':
                     filename = 'sphere_sine256x5'
-                elif self.opt.dataset_name == 'nerfies':
+                elif self.opt.dataset_name == 'curls':
+                    filename = 'sphere_sine128x5'
+                elif self.opt.dataset_name == 'toby':
                     filename = 'sphere_sine128x5'
                 elif self.opt.dataset_name == 'mynlr':
                     filename = 'sphere_sine128x5'
@@ -192,7 +194,9 @@ class SDFIBRNet(MetaModule):
             filename = 'sphere_sine128x5'
         elif self.opt.dataset_name == 'nlr':
             filename = 'sphere_sine256x5'
-        elif self.opt.dataset_name == 'nerfies':
+        elif self.opt.dataset_name == 'curls':
+            filename = 'sphere_sine256x5'
+        elif self.opt.dataset_name == 'toby':
             filename = 'sphere_sine256x5'
         folder = 'regularized' if self.opt.init_regularized else 'base'
         self.load_checkpoint(f'./assets/{folder}/{filename}.pth', load_sdf=True)

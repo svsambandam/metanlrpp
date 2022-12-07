@@ -124,7 +124,10 @@ def train(model, train_dataloader, epochs, lr, steps_til_summary, epochs_til_che
                 elif model.opt.dataset_name == 'nlr':
                     OPTSHAPE_FIRST = 100
                     OPTSHAPE_EVERY = 3
-                elif model.opt.dataset_name == 'nerfies':
+                elif model.opt.dataset_name == 'curls':
+                    OPTSHAPE_FIRST = 50
+                    OPTSHAPE_EVERY = 7
+                elif model.opt.dataset_name == 'toby':
                     OPTSHAPE_FIRST = 50
                     OPTSHAPE_EVERY = 7
                 elif model.opt.dataset_name == 'mynlr':

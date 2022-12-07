@@ -221,7 +221,7 @@ class SingleBVPNet(MetaModule):
         self.opt = opt
         self.hyperwarp = hyperwarp
         self.ambient_dim = ambient_dim
-        if self.hyperwarp:
+        if not self.hyperwarp:
             self.ambient_dim = 0
         self.activation = activation
         self.activation_last = activation_last
@@ -232,10 +232,10 @@ class SingleBVPNet(MetaModule):
         self.positional_encoding = None
         if positional_encoding is not None and positional_encoding != 'none':
             self.positional_encoding = self.get_positional_encoding(
-                positional_encoding, in_features, positional_encoding_kwargs)
-            in_features = self.positional_encoding.out_dim
+                positional_encoding, self.in_features, positional_encoding_kwargs)
+            self.in_features = self.positional_encoding.out_dim
 
-        self.net = FCBlock(in_features=in_features, out_features=out_features, num_hidden_layers=num_hidden_layers,
+        self.net = FCBlock(in_features=self.in_features, out_features=out_features, num_hidden_layers=num_hidden_layers,
                            hidden_features=hidden_features, outermost_linear=True,
                            activation=activation, activation_last=activation_last,
                            skip_connections=skip_connections)
@@ -275,10 +275,12 @@ class SingleBVPNet(MetaModule):
                             activation='relu', activation_last=activation_last,
                             skip_connections=[[0,4]])
                 self.warp_w = FCBlock(in_features=128, out_features=in_features, 
-                            num_hidden_layers=0, outermost_linear=True,
+                            num_hidden_layers=0,
+                            hidden_features=128, outermost_linear=True,
                             activation='relu', activation_last=activation_last)
                 self.warp_v = FCBlock(in_features=128, out_features=in_features, 
-                            num_hidden_layers=0, outermost_linear=True,
+                            num_hidden_layers=0,
+                            hidden_features=128, outermost_linear=True,
                             activation='relu', activation_last=activation_last)
                 torch.nn.init.uniform_(self.warp_w.__dict__['_modules']['net'][-1][0].bias, -1e-4, 1e-4)
                 torch.nn.init.uniform_(self.warp_w.__dict__['_modules']['net'][-1][0].weight, -1e-4, 1e-4)
@@ -287,6 +289,7 @@ class SingleBVPNet(MetaModule):
             else:
                 raise(KeyError)
         if self.hyperwarp and warp_positional_encoding != 'none':
+            assert(self.ambient_dim>0)
             warp_positional_encoding_kwargs['fn_samples']=1
             self.warp_positional_encoding = self.get_positional_encoding(
                 warp_positional_encoding, meta_dim, warp_positional_encoding_kwargs)
@@ -370,7 +373,7 @@ class SDFDecoder(SingleBVPNet):
         coords = self._apply_flow(coords, model_input.get('time', None))
 
         # Optional warp with positional encoding.
-        if self.warping is not None and self.warp_positional_encoding is not None and self.warp_net is not None:     
+        if self.warping is not None and self.warp_positional_encoding is not None:     
             pos_enc = self.warp_positional_encoding(meta)
             coords_enc = torch.cat((coords,pos_enc),axis=-1)        
             if self.warping == 'translation':
@@ -406,6 +409,7 @@ class SDFDecoder(SingleBVPNet):
 
         if self.hyperwarp:    
             ambient_coords = self.hyperwarp_net(coords_enc)
+            ambient_coords = ambient_coords.reshape(list(coords.shape[:-1])+[self.ambient_dim])
             coords = torch.cat((coords, ambient_coords), axis=-1)
 
 
